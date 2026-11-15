@@ -25,6 +25,7 @@ export const monadTestnet = defineChain({
   nativeCurrency: { name: 'Monad', symbol: 'MON', decimals: 18 },
   rpcUrls: { default: { http: [env.rpcUrl] } },
   blockExplorers: { default: { name: 'Monad Explorer', url: 'https://testnet.monadexplorer.com' } },
+  contracts: { multicall3: { address: '0xcA11bde05977b3631167028862bE2a173976CA11' } },
 });
 
 export const ZERO: Hex = '0x0000000000000000000000000000000000000000';
@@ -62,7 +63,8 @@ export interface Deployment {
   tokens: { index: number; symbol: string; name: string; rarity: Rarity; address: Hex; coingeckoId: string; color: string }[];
 }
 
-const deploymentPath = resolve(repoRoot, 'contracts/deployments/monad-testnet.json');
+// DEPLOYMENT_FILE overrides the path (for testing without touching contracts/).
+const deploymentPath = process.env.DEPLOYMENT_FILE || resolve(repoRoot, 'contracts/deployments/monad-testnet.json');
 let cached: { mtimeMs: number; dep: Deployment | null } | undefined;
 
 /** Re-reads the deployment file whenever it changes on disk, so a `git pull` is picked up without a restart. */

@@ -8,6 +8,8 @@ const MAX_ITEMS = 50;
 const MAX_CHUNK = 100n;
 // Never scan further back than this (~2 h of Monad blocks), even if deployBlock is 0 or old.
 const MAX_LOOKBACK = 20_000n;
+// Catch up gradually so the public RPC doesn't rate-limit us (chain adds ~5 blocks per tick).
+const MAX_CHUNKS_PER_TICK = 10;
 
 export const packOpenedEvent = parseAbiItem(
   'event PackOpened(uint256 indexed requestId, address indexed buyer, uint256 pricePaid, uint8 tier, uint32 multiplierBps, uint256 totalValueWei, bytes32 seed, (address token, uint8 rarity, uint256 amount, uint256 valueWei)[10] pulls)',
@@ -49,14 +51,15 @@ async function tick() {
     console.log(`[feed] watching ${vault} from block ${nextBlock}`);
   }
 
-  while (nextBlock! <= latest) {
+  for (let calls = 0; nextBlock! <= latest && calls < MAX_CHUNKS_PER_TICK; calls++) {
     const from = nextBlock!;
     const to = from + chunk - 1n < latest ? from + chunk - 1n : latest;
     let logs;
     try {
       logs = await client.getLogs({ address: vault, event: packOpenedEvent, fromBlock: from, toBlock: to, strict: true });
     } catch (err) {
-      if (chunk > 1n) { chunk /= 2n; continue; }
+      // Only shrink on range errors; anything else (rate limit, network) just retries next tick.
+      if (chunk > 1n && /range|too large|limit exceeded/i.test(String(err))) { chunk /= 2n; continue; }
       throw err;
     }
     chunk = MAX_CHUNK;
@@ -88,7 +91,7 @@ export function startFeedPoller() {
     try {
       await tick();
     } catch (err) {
-      console.warn('[feed]', (err as Error).message);
+      console.warn('[feed]', (err as { shortMessage?: string }).shortMessage ?? (err as Error).message);
     } finally {
       running = false;
     }
