@@ -3,7 +3,8 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "pnpm --parallel --filter backend --filter web run dev",
+    "dev": "NEXT_PUBLIC_MOCK=0 pnpm --parallel --filter backend --filter web run dev",
+    "dev:web": "NEXT_PUBLIC_MOCK=0 pnpm --filter web run dev",
     "dev:mock": "pnpm --filter web run dev:mock",
     "build": "pnpm --filter web run build",
     "typecheck": "pnpm -r run --if-present typecheck"

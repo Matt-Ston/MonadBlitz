@@ -568,17 +568,17 @@ These rules exist so the four folders fit together on the first try. They're add
 ### 15.2 One source of truth (P4 creates, everyone imports)
 Today the catalog, odds table and §3.7 types are copy-pasted in `backend/src/{config,types,odds}.ts`, `web/src/lib/sdk-stub.tsx` and `sdk/src/mock.ts`. Stop copying; import instead.
 - [ ] **P4:** `sdk/src/constants.ts`: `CATALOG_SNAPSHOT` (§3.4 rows incl. `coingeckoId`, `usd`, `color`), `ODDS_TABLE` / `ODDS` (§3.3), `PACK_PRICE_WEI`, `CHAIN_ID = 10143`. No React imports.
-- [ ] **P4:** `sdk/src/abi.ts`: viem `as const` (or `parseAbi`) for `openPack`, `packPrice`, `nextRequestId`, `catalog`, `PackOpened`, `getPrice`, `setPrices`, `updater`, ERC-20 `balanceOf`. Typed `as const` ABIs give typed event decoding; JSON imports from `contracts/abi/` don't. The sdk then needs only the **addresses** from P1, not the ABI files.
+- [x] **P4:** `sdk/src/abi.ts`: viem `as const` (or `parseAbi`) for `openPack`, `packPrice`, `nextRequestId`, `catalog`, `PackOpened`, `getPrice`, `setPrices`, `updater`, ERC-20 `balanceOf`. Typed `as const` ABIs give typed event decoding; JSON imports from `contracts/abi/` don't. The sdk then needs only the **addresses** from P1, not the ABI files.
 - [ ] **P4:** `sdk/package.json` `"exports"`: `"."` → `src/index.ts`, `"./types"` → `src/types.ts`, `"./constants"` → `src/constants.ts`, `"./abi"` → `src/abi.ts`. The subpaths must stay **React/wagmi-free** so the Node backend can import them.
 - **Rule for everyone:** if you need a catalog row, tier number, type or ABI fragment, import it from `@coinpack/sdk/{types,constants,abi}`. Never paste it again.
 
 ### 15.3 SDK real mode (P4), behaviours the web already relies on
-- [ ] `useOpenPack`: pass viem's error through **unchanged** (web matches `error.message` for "insufficient funds" / "rejected"). Don't pad the gas limit: Monad charges the full gas limit, so let viem estimate.
-- [ ] After `PackOpened` is parsed: **invalidate the `useHoldings` query** and **prepend the result to `useRecentFeed` locally**. The backend only polls every 2 s, and the web never calls `refetch()` itself.
-- [ ] `useHoldings` and `useCatalog` (fallback path): take `priceWei` from `PriceOracle.getPrice` via multicall, not from CoinGecko, so collection values match what the vault minted. Use the backend only for `priceUsd` (it already serves on-chain prices once live).
-- [ ] Provider: wagmi `ssr: true`; import `@rainbow-me/rainbowkit/styles.css` inside the sdk; re-export RainbowKit's `ConnectButton` in real mode.
-- [ ] `MOCK` must read `process.env.NEXT_PUBLIC_MOCK` **literally** (Next only inlines literal reads, including inside transpiled packages).
-- [ ] **Env location:** Next reads `.env*` from `web/`, not the repo root. Either have the root `dev` script pass the vars, or document `web/.env.local`. (Tell P3 if `next.config.js` needs a line, because P3 owns it.) Fix the root README, which currently says `cp .env.example .env` at the root.
+- [x] `useOpenPack`: pass viem's error through **unchanged** (web matches `error.message` for "insufficient funds" / "rejected"). Don't pad the gas limit: Monad charges the full gas limit, so let viem estimate.
+- [x] After `PackOpened` is parsed: **invalidate the `useHoldings` query** and **prepend the result to `useRecentFeed` locally**. The backend only polls every 2 s, and the web never calls `refetch()` itself.
+- [x] `useHoldings` and `useCatalog` (fallback path): take `priceWei` from `PriceOracle.getPrice` via multicall, not from CoinGecko, so collection values match what the vault minted. Use the backend only for `priceUsd` (it already serves on-chain prices once live).
+- [x] Provider: wagmi `ssr: true`; import `@rainbow-me/rainbowkit/styles.css` inside the sdk; re-export RainbowKit's `ConnectButton` in real mode.
+- [x] `MOCK` must read `process.env.NEXT_PUBLIC_MOCK` **literally** (Next only inlines literal reads, including inside transpiled packages).
+- [x] **Env location:** Next reads `.env*` from `web/`, not the repo root. Either have the root `dev` script pass the vars, or document `web/.env.local`. (Tell P3 if `next.config.js` needs a line, because P3 owns it.) Fix the root README, which currently says `cp .env.example .env` at the root.
 - [ ] Rename `READMEmonad.md` → `ARCHITECTURE.md` (the name §3.1 and the sdk comments use) and update the README link.
 - [ ] **Do one Vercel deploy as soon as the sdk switch is in, not at 2:30.** Root dir `web`, install from the workspace root, "include files outside root directory" on (the sdk imports `../../contracts/deployments/*.json`).
 
