@@ -593,8 +593,8 @@ Today the catalog, odds table and §3.7 types are copy-pasted in `backend/src/{c
 
 ### 15.6 Contracts (P1)
 - [x] Push `IPackVault.sol`, ABIs and placeholder deployment JSON **first**; everyone else is waiting on the shape.
-- [ ] Deploy script sets snapshot prices **before** any `openPack` (a `priceWei` of 0 divides by zero inside `openPack`). Consider `require(price > 0)` with a clear error.
-- [ ] Oracle updater = `0x1FD608aa75ec266B98002B3a0f9B2Ea1bd712784` (P2's published address).
+- [x] Deploy script sets snapshot prices **before** any `openPack` (a `priceWei` of 0 divides by zero inside `openPack`). Consider `require(price > 0)` with a clear error.
+- [x] Oracle updater = `0x1FD608aa75ec266B98002B3a0f9B2Ea1bd712784` (P2's published address).
 - [ ] Write the real `deployBlock`, because the backend feed scans from it in 100-block chunks.
 - [ ] Deployment JSON `tokens[]` must include `symbol`, `name`, `rarity`, `address`, `coingeckoId`, `color` in §3.4 order; sdk and backend both read it, with lowercase addresses.
 

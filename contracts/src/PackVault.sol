@@ -10,6 +10,9 @@ contract PackVault is IPackVault, Ownable {
     IPriceOracle public immutable oracle;
     uint256 public packPrice;
     uint256 public nextRequestId = 1;
+    /// The draw depends on block data, so gas used differs between eth_estimateGas and inclusion
+    /// (measured 281k-535k). Requiring the worst case up front makes wallet estimates always succeed.
+    uint256 public minGasLeft = 600_000;
 
     TokenInfo[] internal _catalog;
     address[][4] internal _byRarity; // rarity => token addresses, catalog order
@@ -17,6 +20,7 @@ contract PackVault is IPackVault, Ownable {
     error CatalogAlreadySet();
     error CatalogEmpty();
     error ZeroPrice(address token);
+    error NotEnoughGas();
 
     constructor(IPriceOracle oracle_, uint256 packPrice_) Ownable(msg.sender) {
         oracle = oracle_;
@@ -36,6 +40,10 @@ contract PackVault is IPackVault, Ownable {
 
     function setPackPrice(uint256 price) external onlyOwner {
         packPrice = price;
+    }
+
+    function setMinGasLeft(uint256 g) external onlyOwner {
+        minGasLeft = g;
     }
 
     function withdraw(address payable to) external onlyOwner {
@@ -74,6 +82,7 @@ contract PackVault is IPackVault, Ownable {
     // ---------------------------------------------------------------- open
 
     function openPack(bytes32 userSeed) external payable returns (uint256 requestId) {
+        if (gasleft() < minGasLeft) revert NotEnoughGas();
         uint256 price = packPrice;
         if (msg.value != price) revert WrongPayment();
         if (msg.sender != tx.origin) revert NoContracts();

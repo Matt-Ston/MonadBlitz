@@ -70,6 +70,19 @@
   },
   {
     "type": "function",
+    "name": "minGasLeft",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "nextRequestId",
     "inputs": [],
     "outputs": [
@@ -166,6 +179,19 @@
             "internalType": "uint8"
           }
         ]
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "setMinGasLeft",
+    "inputs": [
+      {
+        "name": "g",
+        "type": "uint256",
+        "internalType": "uint256"
       }
     ],
     "outputs": [],
@@ -319,6 +345,11 @@
   {
     "type": "error",
     "name": "NoContracts",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "NotEnoughGas",
     "inputs": []
   },
   {
