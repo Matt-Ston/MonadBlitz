@@ -5,3 +5,7 @@ packages:
 
 allowBuilds:
   esbuild: true
+  # optional native addons pulled in by wagmi/WalletConnect; the JS fallbacks are fine
+  bufferutil: false
+  keccak: false
+  utf-8-validate: false
