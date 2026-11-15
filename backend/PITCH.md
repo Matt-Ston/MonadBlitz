@@ -6,6 +6,15 @@ Read-aloud notes for the presenter. Numbers come from `pnpm sim 2000000` (2 mill
 
 > Open a pack for 0.1 MON, get 10 crypto tokens. Most packs are worth about what you paid. Every so often you hit a jackpot, and every so often you take a loss, and the odds are public and drawn on-chain.
 
+## Live on Monad testnet (show this to judges)
+
+| Contract | Address |
+|---|---|
+| PackVault (draws + mints) | [`0x9a8fb673ac069c8dcbc1dd0b4d44fd35a77d81cf`](https://testnet.monadexplorer.com/address/0x9a8fb673ac069c8dcbc1dd0b4d44fd35a77d81cf) |
+| PriceOracle (live prices) | [`0x15285aa8248390d45abf0a4522e0677d7fae05ee`](https://testnet.monadexplorer.com/address/0x15285aa8248390d45abf0a4522e0677d7fae05ee) |
+
+Every pack is a `PackOpened` event on the vault: open the vault on the explorer, pick any transaction, and the seed, tier, multiplier and all 10 cards are right there in the logs.
+
 ## Headline numbers
 
 | | |

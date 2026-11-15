@@ -63,8 +63,8 @@ async function tick() {
       throw err;
     }
     chunk = MAX_CHUNK;
-    nextBlock = to + 1n;
 
+    // Advance only after every log is stored, so a failed getBlock retries this chunk instead of dropping packs.
     for (const log of logs) {
       const a = log.args;
       const requestId = a.requestId.toString();
@@ -80,6 +80,7 @@ async function tick() {
       console.log(`[feed] pack #${requestId} ${TIERS[a.tier]} ${a.multiplierBps} bps`);
     }
     if (items.length > MAX_ITEMS) items.length = MAX_ITEMS;
+    nextBlock = to + 1n;
   }
 }
 
