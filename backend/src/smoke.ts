@@ -30,7 +30,7 @@ try {
   check('catalog priceUsd numbers', catalog.every((t: any) => typeof t.priceUsd === 'number'));
 
   const odds = await get('/api/odds');
-  check('odds has 4 tiers', odds.rows?.length === 4);
+  check('odds has 6 tiers', odds.rows?.length === 6);
   check('odds probabilities sum to 10000', odds.rows?.reduce((s: number, r: any) => s + r.probabilityBps, 0) === 10000);
   check('odds packPriceWei decimal', isDecimal(odds.packPriceWei));
 

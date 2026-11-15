@@ -2,7 +2,7 @@
 
 ## IR-1: Rarer rare cards, and make them worth more (§3.3 steps 4–5)
 
-**Status:** proposed by Person 2. Needs a yes from the team, then Person 1 (contract + redeploy) and Person 4 (sdk mock). One redeploy covers both changes.
+**Status:** **adopted** as part of IR-2 (`contracts/INTERFACE_REQUESTS.md`). sdk mock, sim, web and doc v3.0 use these card odds; the contract change ships with Person 1's IR-2 redeploy. The tier names below (BIG_WIN/JACKPOT) are pre-IR-2: the slot-9 rule now applies to LEGENDARY/ULTRA_LEGENDARY packs.
 
 **Why:** today a Legendary turns up in **1 pack in 5** and averages only a third of the pack's value, so rare pulls come too easily and don't feel valuable. After this change a Legendary turns up in **1 pack in 13** and is on average worth **more than the whole pack**.
 

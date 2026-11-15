@@ -2,7 +2,7 @@
 
 > Working name "CoinPack". Rename freely; nothing depends on the name.
 > Target: Monad Blitz hackathon, Monad **testnet** (EVM), team of 4, **3 hours total**.
-> Doc version: **v2.1** (2026-11-15). v2 cuts scope for a 3-hour build (see §13). v2.1 adds the §15 integration checklist (additive; §3 shapes unchanged). Bump the version when any §3 interface changes.
+> Doc version: **v3.0** (2026-11-15). v2 cuts scope for a 3-hour build (see §13). v2.1 adds the §15 integration checklist (additive; §3 shapes unchanged). v3.0 adopts IR-2 (six pack tiers, `contracts/INTERFACE_REQUESTS.md`) with IR-1's card odds bundled: §3.3, §3.5 `Tier`, §3.7 `Tier`/`TIERS`. Bump the version when any §3 interface changes.
 
 ---
 
@@ -87,7 +87,7 @@ A pack-opening app in the style of trading-card pack draws, except every pack ho
 
 ---
 
-## 3. Shared interfaces (FROZEN, v2.0)
+## 3. Shared interfaces (FROZEN, v3.0)
 
 ### 3.1 Repository layout and ownership
 
@@ -125,22 +125,22 @@ Allowed cross-folder **reads**: `contracts/abi/*.json` and `contracts/deployment
 
 | Tier | Enum | Condition | Probability | Multiplier range | Mean |
 |---|---|---|---|---|---|
-| BIG_LOSS | 0 | `t < 500` | 5.0% | 0.30x – 0.70x | 0.50x |
-| CORE | 1 | `500 ≤ t < 9700` | 92.0% | ≈ Normal(0.98x, σ 2%), bounded 0.86x – 1.10x | 0.98x |
-| BIG_WIN | 2 | `9700 ≤ t < 9950` | 2.5% | 1.30x – 2.00x | 1.65x |
-| JACKPOT | 3 | `t ≥ 9950` | 0.5% | 3.00x – 5.00x | 4.00x |
+| COMMON | 0 | `t < 4500` | 45.0% | 0.40x – 0.80x | 0.60x |
+| UNCOMMON | 1 | `4500 ≤ t < 7500` | 30.0% | 0.80x – 1.05x | 0.925x |
+| RARE | 2 | `7500 ≤ t < 9100` | 16.0% | 1.05x – 1.40x | 1.225x |
+| EPIC | 3 | `9100 ≤ t < 9700` | 6.0% | 1.40x – 2.20x | 1.80x |
+| LEGENDARY | 4 | `9700 ≤ t < 9950` | 2.5% | 2.20x – 4.00x | 3.10x |
+| ULTRA_LEGENDARY | 5 | `t ≥ 9950` | 0.5% | 5.00x – 10.00x | 7.50x |
 
-**Step 2: multiplier `multBps`.** Let `R = r(1)`.
-- CORE: `S = Σ_{j=0..11} ((R >> (16*j)) & 0xFFFF)`; `multBps = 9800 + ((int(S) - 393210) * 200) / 65536` (signed, truncating toward zero).
-- BIG_LOSS: `3000 + R % 4001` · BIG_WIN: `13000 + R % 7001` · JACKPOT: `30000 + R % 20001`
+**Step 2: multiplier `multBps`.** Uniform in the tier's range: `multBps = min + r(1) % (max - min + 1)` (min/max in bps from the table, e.g. COMMON `4000 + r(1) % 4001`).
 
 **Step 3.** `totalValueWei = packPrice * multBps / 10000`
 
-**Step 4: tokens.** For slot `i = 0..9`: rarity roll `x = r(10+i) % 10000`: `< 6000` Common(0), `< 8800` Rare(1), `< 9800` Epic(2), else Legendary(3). If tier is BIG_WIN or JACKPOT, **slot 9 is forced Legendary**. Token = `tokensByRarity[rarity][ r(30+i) % len ]` (catalog order, §3.4).
+**Step 4: tokens.** For slot `i = 0..9`: rarity roll `x = r(10+i) % 10000`: `< 7500` Common(0), `< 9500` Rare(1), `< 9950` Epic(2), else Legendary(3). If tier is LEGENDARY or ULTRA_LEGENDARY, **slot 9 is forced Legendary**. Token = `tokensByRarity[rarity][ r(30+i) % len ]` (catalog order, §3.4).
 
-**Step 5: split.** `w_i = (50 + r(50+i) % 101) * RARITY_MUL[rarity_i]`, `RARITY_MUL = [10, 15, 25, 40]`; on BIG_WIN/JACKPOT `w_9 *= 4`. `valueWei_i = totalValueWei * w_i / Σw` for `i < 9`; slot 9 gets the remainder. `amount_i = valueWei_i * 1e18 / priceWei(token_i)`.
+**Step 5: split.** `w_i = (50 + r(50+i) % 101) * RARITY_MUL[rarity_i]`, `RARITY_MUL = [4, 12, 60, 250]`; on LEGENDARY/ULTRA_LEGENDARY `w_9 *= 4`. `valueWei_i = totalValueWei * w_i / Σw` for `i < 9`; slot 9 gets the remainder. `amount_i = valueWei_i * 1e18 / priceWei(token_i)`.
 
-**Stats** (400k-draw Monte Carlo of this exact algorithm): expected value ≈ **0.988x** (house edge ≈ 1.2%); **≈ 86%** of packs within ±5% of price; 1 in 40 is a 1.3–2x win, 1 in 200 a 3–5x jackpot, 1 in 20 a 0.3–0.7x loss. To centre exactly on the price, change `9800` to `10000` (EV ≈ 1.008; fine on testnet).
+**Stats** (`pnpm sim 1000000` in `backend/`, matching Person 1's 100k draws of the contract): expected value ≈ **0.967x** (house edge ≈ 3.3%); **≈ 31%** of packs beat their price; ≈ 12% within ±5%; 1 in 40 is a 2.2–4x Legendary pack, 1 in 200 a 5–10x Ultra Legendary. A Legendary card turns up in 1 pack in 13.
 
 ### 3.4 Token catalog [PROPOSAL]
 
@@ -172,7 +172,7 @@ Person 1 commits this as `contracts/src/interfaces/IPackVault.sol` **in the firs
 pragma solidity ^0.8.24;
 
 interface IPackVault {
-    enum Tier { BIG_LOSS, CORE, BIG_WIN, JACKPOT }
+    enum Tier { COMMON, UNCOMMON, RARE, EPIC, LEGENDARY, ULTRA_LEGENDARY }
 
     struct Pull {
         address token;
@@ -240,8 +240,8 @@ Persons 2 and 3 may paste these locally until the sdk lands, then switch to `imp
 export type Hex = `0x${string}`;
 export type Rarity = 0 | 1 | 2 | 3;
 export const RARITY_NAMES = ['Common', 'Rare', 'Epic', 'Legendary'] as const;
-export type Tier = 'BIG_LOSS' | 'CORE' | 'BIG_WIN' | 'JACKPOT'; // enum index 0..3
-export const TIERS: Tier[] = ['BIG_LOSS', 'CORE', 'BIG_WIN', 'JACKPOT'];
+export type Tier = 'COMMON' | 'UNCOMMON' | 'RARE' | 'EPIC' | 'LEGENDARY' | 'ULTRA_LEGENDARY'; // enum index 0..5
+export const TIERS: Tier[] = ['COMMON', 'UNCOMMON', 'RARE', 'EPIC', 'LEGENDARY', 'ULTRA_LEGENDARY'];
 
 export interface TokenInfo {
   index: number; address: Hex; symbol: string; name: string; decimals: 18;
@@ -304,7 +304,7 @@ export function sortPullsForReveal(pulls: Pull[]): Pull[];             // ascend
 export const MOCK: boolean;                                            // NEXT_PUBLIC_MOCK === '1'
 ```
 
-**Mock mode** (`NEXT_PUBLIC_MOCK=1`): every hook works with no wallet, chain or backend. `open()` waits 1200 ms and returns a fixture (pick CORE 88%, BIG_WIN 5%, JACKPOT 3%, BIG_LOSS 4% so demos show variety). Person 4 ships this **by 0:45**.
+**Mock mode** (`NEXT_PUBLIC_MOCK=1`): every hook works with no wallet, chain or backend. `open()` waits 1200 ms and returns a fixture (demo mix COMMON 30%, UNCOMMON 28%, RARE 20%, EPIC 12%, LEGENDARY 7%, ULTRA_LEGENDARY 3% so demos show variety). Person 4 ships this **by 0:45**.
 
 ### 3.10 Mock fixtures
 
@@ -314,7 +314,7 @@ export const MOCK: boolean;                                            // NEXT_P
   "packResultCore": {
     "requestId": "42", "buyer": "0x1111111111111111111111111111111111111111",
     "txHash": "0xaaaa000000000000000000000000000000000000000000000000000000000000", "openedAt": 1763233201,
-    "pricePaidWei": "100000000000000000", "tier": "CORE", "multiplierBps": 10310, "totalValueWei": "103100000000000000",
+    "pricePaidWei": "100000000000000000", "tier": "UNCOMMON", "multiplierBps": 10310, "totalValueWei": "103100000000000000",
     "seed": "0xcccc000000000000000000000000000000000000000000000000000000000000",
     "pulls": [
       { "slot": 0, "token": "0x00000000000000000000000000000000000000a0", "symbol": "mDOGE", "rarity": 0, "amount": "1600000000000000000", "valueWei": "6400000000000000" },
@@ -331,7 +331,7 @@ export const MOCK: boolean;                                            // NEXT_P
   }
 }
 ```
-Values sum to `totalValueWei`; amounts other than mBTC are illustrative. Also make a JACKPOT variant (`multiplierBps` 41200, slot 9 Legendary holding ~70% of the total) and a BIG_LOSS variant (`multiplierBps` 4300) by scaling the same pulls.
+Values sum to `totalValueWei`; amounts other than mBTC are illustrative. Also make an ULTRA_LEGENDARY variant (`multiplierBps` 75000, slot 9 Legendary holding ~70% of the total) and a COMMON variant (`multiplierBps` 6000) by scaling the same pulls.
 
 ### 3.11 Environment variables (root `.env.example`, Person 4)
 
@@ -443,11 +443,11 @@ Leaderboard of biggest pulls; SSE stream of new pulls; share-image endpoint.
 ### Card design (original theme)
 - Rounded card, rarity frame: Common grey, Rare blue, Epic purple, Legendary gold with a shimmer. Our own badge (circle in the token colour + ticker), amount, value in MON (and USD if `priceUsd`).
 - Card back: simple abstract pattern. Nothing from existing trading-card games.
-- Reveal: cards face-down in a 5x2 grid (2x5 on phones), flip one at a time every 350 ms in `sortPullsForReveal` order (tap to skip). Then a summary bar: paid vs pulled, coloured % change, tier banner. BIG_WIN: glow + confetti. JACKPOT: big confetti + shake. BIG_LOSS: muted "rough pack".
+- Reveal: cards face-down in a 5x2 grid (2x5 on phones), flip one at a time every 350 ms in `sortPullsForReveal` order (tap to skip). Then a summary bar: paid vs pulled, coloured % change, tier banner. COMMON: muted. RARE/EPIC: glow (EPIC adds confetti). LEGENDARY: confetti. ULTRA_LEGENDARY: big confetti + shake.
 
 ### MVP (in order, with checkpoints)
 1. **By 0:20:** Next.js + Tailwind scaffold, layout, nav, `<CoinPackProvider>` slot and `ConnectButton` slot (use the stub until the sdk lands).
-2. **By 1:00:** Card component (4 rarities, flip) + the full reveal sequence on `/` driven by fixtures, for CORE, JACKPOT and BIG_LOSS.
+2. **By 1:00:** Card component (4 rarities, flip) + the full reveal sequence on `/` driven by fixtures, for UNCOMMON, ULTRA_LEGENDARY and COMMON.
 3. **By 1:30:** wired to `useOpenPack` (button states from `status`: signing → mining → reveal), wrong-chain and not-connected states, faucet link if the tx fails for lack of MON.
 4. **By 2:00:** `/collection` and `/odds`.
 5. **2:00–2:30:** polish only.

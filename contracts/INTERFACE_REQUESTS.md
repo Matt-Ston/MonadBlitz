@@ -2,7 +2,7 @@
 
 ## IR-2: Six pack tiers with more spread-out odds (§3.3 steps 1–2, §3.5 `Tier`, §3.7 `Tier`)
 
-**Status:** proposed by Person 1. **Needs a yes from the team.** The contract is built and tested on Person 1's local branch `odds-6tier` but **not deployed**. The live contracts on testnet still use the original 4 tiers, so nothing breaks until we agree.
+**Status:** **agreed by the team (IR-1 card odds bundled).** sdk, backend, web and the doc (v3.0) are updated on `main`. **Waiting on Person 1:** merge `odds-6tier`, redeploy, commit the new `deployments/monad-testnet.json`. Until then the live vault still emits the old 4-tier indices (0–3), which the updated apps would read as COMMON–EPIC, so redeploy before the demo.
 
 **Why:** today 92% of packs are "Core", so almost every pack feels the same. Six tiers spread the outcomes out: about 1 pack in 3 is a profit, and each tier has its own name for the reveal.
 

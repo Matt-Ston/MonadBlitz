@@ -3,8 +3,8 @@
 export type Hex = `0x${string}`;
 export type Rarity = 0 | 1 | 2 | 3;
 export const RARITY_NAMES = ['Common', 'Rare', 'Epic', 'Legendary'] as const;
-export type Tier = 'BIG_LOSS' | 'CORE' | 'BIG_WIN' | 'JACKPOT'; // enum index 0..3
-export const TIERS: Tier[] = ['BIG_LOSS', 'CORE', 'BIG_WIN', 'JACKPOT'];
+export type Tier = 'COMMON' | 'UNCOMMON' | 'RARE' | 'EPIC' | 'LEGENDARY' | 'ULTRA_LEGENDARY'; // enum index 0..5 (IR-2)
+export const TIERS: Tier[] = ['COMMON', 'UNCOMMON', 'RARE', 'EPIC', 'LEGENDARY', 'ULTRA_LEGENDARY'];
 
 export interface TokenInfo {
   index: number;

@@ -84,7 +84,8 @@ export function WheelSpin({
                 }`}
                 style={{ transform: 'translateX(-50%) rotate(180deg)', writingMode: span < 30 ? 'vertical-rl' : undefined }}
               >
-                {TIER_INFO[s.tier].label}
+                {/* the 0.5% sliver is too thin for a word */}
+                {span < 5 ? '★' : s.label}
               </span>
             </div>
           );

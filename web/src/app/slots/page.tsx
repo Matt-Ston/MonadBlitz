@@ -7,7 +7,7 @@ export default function SlotsPage() {
     <GamePage
       title="Pull the lever."
       accent="Win 10 tokens."
-      blurb="Each spin is one pack: the same on-chain draw, the same public odds, 10 real-priced tokens to your wallet. Three crowns is a jackpot."
+      blurb="Each spin is one pack: the same on-chain draw, the same public odds, 10 real-priced tokens to your wallet. Three crowns is an Ultra Legendary."
       verb="Spin"
       renderMachine={(p) => <SlotMachine {...p} />}
     />

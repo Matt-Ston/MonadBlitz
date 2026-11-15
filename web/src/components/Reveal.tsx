@@ -16,9 +16,13 @@ const SWIPE_PX = 80;
 type Phase = 'down' | 'charging' | 'up';
 
 async function celebrate(tier: PackResult['tier']) {
-  if (tier !== 'BIG_WIN' && tier !== 'JACKPOT') return;
+  if (tier === 'COMMON' || tier === 'UNCOMMON' || tier === 'RARE') return;
   const confetti = (await import('canvas-confetti')).default;
-  if (tier === 'BIG_WIN') {
+  if (tier === 'EPIC') {
+    confetti({ particleCount: 60, spread: 70, origin: { y: 0.6 }, colors: ['#d946ef', '#c084fc', '#ffffff'] });
+    return;
+  }
+  if (tier === 'LEGENDARY') {
     confetti({ particleCount: 120, spread: 80, origin: { y: 0.6 } });
     return;
   }
@@ -84,7 +88,7 @@ export function Reveal({ result, catalog, onAgain }: { result: PackResult; catal
   useEffect(() => {
     if (!done) return;
     if (!skipped) celebrate(result.tier);
-    if (result.tier === 'JACKPOT' && !reduced && !skipped) {
+    if (result.tier === 'ULTRA_LEGENDARY' && !reduced && !skipped) {
       shake.start({ x: [0, -12, 12, -10, 10, -6, 6, 0], transition: { duration: 0.7 } });
     }
   }, [done, skipped, result.tier, shake, reduced]);
@@ -125,7 +129,8 @@ export function Reveal({ result, catalog, onAgain }: { result: PackResult; catal
 
   const pct = pctChange(result.pricePaidWei, result.totalValueWei);
   const tier = TIER_INFO[result.tier];
-  const muted = done && result.tier === 'BIG_LOSS';
+  const glowing = result.tier === 'RARE' || result.tier === 'EPIC' || result.tier === 'LEGENDARY';
+  const muted = done && result.tier === 'COMMON';
   const bestPull = ordered[rarities.indexOf(best)];
 
   if (!torn) {
@@ -215,8 +220,9 @@ export function Reveal({ result, catalog, onAgain }: { result: PackResult; catal
         {/* revealed cards collect here, lowest value first */}
         <div
           className={`grid w-full grid-cols-2 gap-2 transition sm:grid-cols-5 duration-700 sm:gap-3 ${muted ? 'opacity-60 saturate-50' : ''} ${
-            done && result.tier === 'BIG_WIN' ? 'drop-shadow-[0_0_30px_rgba(16,185,129,0.45)]' : ''
+            done && glowing ? 'drop-shadow-[0_0_30px_var(--tier-glow)]' : ''
           }`}
+          style={{ '--tier-glow': `${tier.glow}73` } as React.CSSProperties}
         >
           {ordered.map((p, i) =>
             i < cur ? (

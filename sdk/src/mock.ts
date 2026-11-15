@@ -46,13 +46,15 @@ export const CATALOG: TokenInfo[] = CATALOG_SRC.map(([symbol, name, rarity, usd,
 
 export const ODDS: Odds = {
   rows: [
-    { tier: 'BIG_LOSS', probabilityBps: 500, minMultBps: 3000, maxMultBps: 7000, meanMultBps: 5000 },
-    { tier: 'CORE', probabilityBps: 9200, minMultBps: 6200, maxMultBps: 12900, meanMultBps: 9500 },
-    { tier: 'BIG_WIN', probabilityBps: 250, minMultBps: 13000, maxMultBps: 20000, meanMultBps: 16500 },
-    { tier: 'JACKPOT', probabilityBps: 50, minMultBps: 30000, maxMultBps: 50000, meanMultBps: 40000 },
+    { tier: 'COMMON', probabilityBps: 4500, minMultBps: 4000, maxMultBps: 8000, meanMultBps: 6000 },
+    { tier: 'UNCOMMON', probabilityBps: 3000, minMultBps: 8000, maxMultBps: 10500, meanMultBps: 9250 },
+    { tier: 'RARE', probabilityBps: 1600, minMultBps: 10500, maxMultBps: 14000, meanMultBps: 12250 },
+    { tier: 'EPIC', probabilityBps: 600, minMultBps: 14000, maxMultBps: 22000, meanMultBps: 18000 },
+    { tier: 'LEGENDARY', probabilityBps: 250, minMultBps: 22000, maxMultBps: 40000, meanMultBps: 31000 },
+    { tier: 'ULTRA_LEGENDARY', probabilityBps: 50, minMultBps: 50000, maxMultBps: 100000, meanMultBps: 75000 },
   ],
-  expectedValueBps: 9600,
-  withinFivePctBps: 3610,
+  expectedValueBps: 9665,
+  withinFivePctBps: 1190,
   packPriceWei: PACK_PRICE.toString(),
 };
 
@@ -74,10 +76,10 @@ export const balances = new Map<string, bigint>();
 for (const p of FIXTURE_CORE_PULLS) balances.set(p.token, (balances.get(p.token) ?? 0n) + BigInt(p.amount));
 const now = () => Math.floor(Date.now() / 1000);
 export let feed: FeedItem[] = [
-  { requestId: '41', buyer: '0x2222222222222222222222222222222222222222', tier: 'BIG_WIN', multiplierBps: 17250, totalValueWei: '172500000000000000', openedAt: now() - 40 },
-  { requestId: '40', buyer: '0x3333333333333333333333333333333333333333', tier: 'CORE', multiplierBps: 9930, totalValueWei: '99300000000000000', openedAt: now() - 95 },
-  { requestId: '39', buyer: '0x4444444444444444444444444444444444444444', tier: 'BIG_LOSS', multiplierBps: 4300, totalValueWei: '43000000000000000', openedAt: now() - 160 },
-  { requestId: '38', buyer: '0x5555555555555555555555555555555555555555', tier: 'JACKPOT', multiplierBps: 41200, totalValueWei: '412000000000000000', openedAt: now() - 300 },
+  { requestId: '41', buyer: '0x2222222222222222222222222222222222222222', tier: 'EPIC', multiplierBps: 17250, totalValueWei: '172500000000000000', openedAt: now() - 40 },
+  { requestId: '40', buyer: '0x3333333333333333333333333333333333333333', tier: 'UNCOMMON', multiplierBps: 9930, totalValueWei: '99300000000000000', openedAt: now() - 95 },
+  { requestId: '39', buyer: '0x4444444444444444444444444444444444444444', tier: 'COMMON', multiplierBps: 4300, totalValueWei: '43000000000000000', openedAt: now() - 160 },
+  { requestId: '38', buyer: '0x5555555555555555555555555555555555555555', tier: 'LEGENDARY', multiplierBps: 31200, totalValueWei: '312000000000000000', openedAt: now() - 300 },
 ];
 let nextId = 42;
 let version = 0;
@@ -100,12 +102,13 @@ const randHex = (): Hex => `0x${Array.from({ length: 64 }, () => Math.floor(Math
 const RARITY_MUL = [4, 12, 60, 250];
 
 export function makeMockResult(): PackResult {
-  const roll = Math.random() * 100; // demo mix: CORE 88, BIG_WIN 5, JACKPOT 3, BIG_LOSS 4
-  const tier: Tier = roll < 88 ? 'CORE' : roll < 93 ? 'BIG_WIN' : roll < 96 ? 'JACKPOT' : 'BIG_LOSS';
-  const multiplierBps =
-    tier === 'CORE' ? rnd(8200, 10600) : tier === 'BIG_WIN' ? rnd(13000, 20000) : tier === 'JACKPOT' ? rnd(30000, 50000) : rnd(3000, 7000);
+  // Demo mix (more wins than the real 45/30/16/6/2.5/0.5 so every tier shows up in a demo); ranges are IR-2's.
+  const roll = Math.random() * 100;
+  const tierIdx = roll < 30 ? 0 : roll < 58 ? 1 : roll < 78 ? 2 : roll < 90 ? 3 : roll < 97 ? 4 : 5;
+  const tier: Tier = ODDS.rows[tierIdx].tier;
+  const multiplierBps = rnd(ODDS.rows[tierIdx].minMultBps, ODDS.rows[tierIdx].maxMultBps);
   const total = (PACK_PRICE * BigInt(multiplierBps)) / 10000n;
-  const win = tier === 'BIG_WIN' || tier === 'JACKPOT';
+  const win = tier === 'LEGENDARY' || tier === 'ULTRA_LEGENDARY';
 
   const picks = Array.from({ length: 10 }, (_, i) => {
     const x = rnd(0, 9999);

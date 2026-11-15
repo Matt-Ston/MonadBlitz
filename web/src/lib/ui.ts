@@ -2,7 +2,7 @@ import type { Pull, Rarity, Tier, TokenInfo } from './sdk';
 
 /**
  * Display rarity: the on-chain 0–3 plus two display-only tiers. The contract forces slot 9 to Legendary on
- * BIG_WIN / JACKPOT packs; we show that card as Mythic (1 in 40 packs) or Ultra Legendary (1 in 200).
+ * LEGENDARY / ULTRA_LEGENDARY packs (IR-2); we show that card as Mythic (1 in 40 packs) or Ultra Legendary (1 in 200).
  */
 export type DisplayRarity = Rarity | 4 | 5;
 export const MYTHIC = 4;
@@ -10,8 +10,8 @@ export const ULTRA = 5;
 
 export function displayRarity(pull: Pull, tier: Tier): DisplayRarity {
   if (pull.rarity === 3 && pull.slot === 9) {
-    if (tier === 'JACKPOT') return ULTRA;
-    if (tier === 'BIG_WIN') return MYTHIC;
+    if (tier === 'ULTRA_LEGENDARY') return ULTRA;
+    if (tier === 'LEGENDARY') return MYTHIC;
   }
   return pull.rarity;
 }
@@ -58,12 +58,24 @@ export function formatCoin(symbol: string, amountWei: string): string {
   return `${amount} ${ticker}`;
 }
 
-export const TIER_INFO: Record<Tier, { label: string; className: string }> = {
-  BIG_LOSS: { label: 'Rough pack', className: 'bg-zinc-700 text-zinc-200' },
-  CORE: { label: 'Solid pack', className: 'bg-sky-600 text-white' },
-  BIG_WIN: { label: 'Big win!', className: 'bg-emerald-500 text-black' },
-  JACKPOT: { label: 'JACKPOT!', className: 'bg-gradient-to-r from-amber-300 via-yellow-200 to-amber-400 text-black' },
+/** Pack tiers (IR-2). `short` fits on a wheel segment; `glow` is the tier's accent colour. */
+export const TIER_INFO: Record<Tier, { label: string; short: string; className: string; glow: string }> = {
+  COMMON: { label: 'Common pack', short: 'Common', className: 'bg-zinc-700 text-zinc-200', glow: '#71717a' },
+  UNCOMMON: { label: 'Uncommon pack', short: 'Uncommon', className: 'bg-sky-600 text-white', glow: '#0ea5e9' },
+  RARE: { label: 'Rare pack!', short: 'Rare', className: 'bg-emerald-500 text-black', glow: '#10b981' },
+  EPIC: { label: 'Epic pack!', short: 'Epic', className: 'bg-fuchsia-500 text-white', glow: '#d946ef' },
+  LEGENDARY: {
+    label: 'Legendary!', short: 'Legend',
+    className: 'bg-gradient-to-r from-amber-300 via-yellow-200 to-amber-400 text-black', glow: '#fbbf24',
+  },
+  ULTRA_LEGENDARY: {
+    label: 'Ultra Legendary!', short: 'Ultra',
+    className: 'bg-gradient-to-r from-pink-400 via-violet-400 to-sky-400 text-black', glow: '#f472b6',
+  },
 };
+
+/** Packs that end on a boosted Mythic / Ultra Legendary card and get the big celebration. */
+export const isBigWin = (tier: Tier) => tier === 'LEGENDARY' || tier === 'ULTRA_LEGENDARY';
 
 /** Human-readable token amount from 18-decimal wei string. */
 export function formatAmount(wei: string): string {

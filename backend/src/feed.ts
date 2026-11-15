@@ -72,7 +72,7 @@ async function tick() {
       items.unshift({
         requestId,
         buyer: a.buyer.toLowerCase() as Hex,
-        tier: TIERS[a.tier] ?? 'CORE',
+        tier: TIERS[a.tier] ?? 'COMMON',
         multiplierBps: a.multiplierBps,
         totalValueWei: a.totalValueWei.toString(),
         openedAt: await blockTime(log.blockNumber),

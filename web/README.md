@@ -19,7 +19,7 @@ pnpm build
 | `/collection` | Holdings grid with MON (and USD) value, total |
 | `/odds` | Tier table, EV, ±5% share, how the draw works, testnet disclaimer |
 
-Reveal: 10 face-down cards (5x2, 2x5 on phones) flip every 350 ms in `sortPullsForReveal` order, best card last. Tap to skip. Then a summary bar and tier banner. BIG_WIN glows and fires confetti, JACKPOT fires big confetti and shakes the grid, and BIG_LOSS is muted.
+Reveal: 10 face-down cards (5x2, 2x5 on phones) flip every 350 ms in `sortPullsForReveal` order, best card last. Tap to skip. Then a summary bar and tier banner. Pack tiers (IR-2): COMMON is muted, RARE/EPIC glow (EPIC adds confetti), LEGENDARY fires confetti, and ULTRA_LEGENDARY fires big confetti and shakes the grid.
 
 ## SDK
 

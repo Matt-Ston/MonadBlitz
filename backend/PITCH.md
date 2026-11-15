@@ -1,10 +1,10 @@
 # CoinPack: pitch numbers and odds explainer
 
-Read-aloud notes for the presenter. Numbers come from `pnpm sim 400000` (400k simulated packs of the exact §3.3 v3 rules).
+Read-aloud notes for the presenter. Numbers come from `pnpm sim 1000000` (1 million simulated packs of the §3.3 rules with IR-2's six tiers); they match Person 1's 100k draws of the contract's own `drawMultiplier`.
 
 ## The one-liner
 
-> Open a pack for 0.1 MON, get 10 crypto tokens. About 1 in 4 packs beats its price, 1 in 200 is a 3–5x jackpot, and the house edge is a published 4%. The odds are public and drawn on-chain.
+> Open a pack for 0.1 MON, get 10 crypto tokens. About 1 in 3 packs beats its price, 1 in 200 is a 5–10x Ultra Legendary, and the house edge is a published ~3%. The odds are public and drawn on-chain.
 
 ## Live on Monad testnet (show this to judges)
 
@@ -20,23 +20,27 @@ Every pack is a `PackOpened` event on the vault: open the vault on the explorer,
 | | |
 |---|---|
 | Pack price | **0.1 MON** (testnet) |
-| Expected value | **0.960x** the price → house edge **≈ 4%** |
-| Packs within ±5% of the price | **≈ 36%** |
-| Packs worth more than you paid | **≈ 28%** (about 1 in 4) |
-| Median pack | **0.95x** (5th–95th percentile 0.70x – 1.11x) |
-| Best possible / worst possible | **5.0x / 0.3x** |
+| Expected value | **0.967x** the price → house edge **≈ 3.3%** |
+| Packs within ±5% of the price | **≈ 12%** (outcomes are spread out on purpose) |
+| Packs worth more than you paid | **≈ 31%** (about 1 in 3) |
+| Median pack | **0.84x** (5th–95th percentile 0.44x – 1.93x) |
+| Best possible / worst possible | **10.0x / 0.4x** |
 | Packs with at least one Legendary card | **≈ 7.8%** (1 in 13) |
 
 ## The odds table (what's on the Odds page)
 
 | Tier | Chance | Roughly | Pack value |
 |---|---|---|---|
-| Core | 92% | most packs | 0.62x – 1.29x, centred on 0.95x |
-| Big Loss | 5% | 1 in 20 | 0.30x – 0.70x |
-| Big Win | 2.5% | 1 in 40 | 1.30x – 2.00x |
-| Jackpot | 0.5% | 1 in 200 | 3.00x – 5.00x |
+| Common | 45% | about 1 in 2 | 0.40x – 0.80x |
+| Uncommon | 30% | about 1 in 3 | 0.80x – 1.05x |
+| Rare | 16% | about 1 in 6 | 1.05x – 1.40x |
+| Epic | 6% | 1 in 17 | 1.40x – 2.20x |
+| Legendary | 2.5% | 1 in 40 | 2.20x – 4.00x |
+| Ultra Legendary | 0.5% | 1 in 200 | 5.00x – 10.00x |
 
-Card rarities (per card): Common 75%, Rare 20%, Epic 4.5%, Legendary 0.5%. A Legendary is worth about 1.1x the whole pack on average (value weights 4 / 12 / 60 / 250). On a Big Win or Jackpot the last card is always Legendary and carries most of the value, which is why the reveal saves the best card for last.
+Inside each tier the pack value is uniform between the two bounds.
+
+Card rarities (per card): Common 75%, Rare 20%, Epic 4.5%, Legendary 0.5%. A Legendary card is worth about 1.7x the whole pack on average (value weights 4 / 12 / 60 / 250). On a Legendary or Ultra Legendary pack the last card is always Legendary (shown as Mythic / Ultra Legendary) and carries most of the value, which is why the reveal saves the best card for last.
 
 ## How it works (30 seconds)
 
@@ -54,7 +58,7 @@ Card rarities (per card): Common 75%, Rare 20%, Epic 4.5%, Legendary 0.5%. A Leg
 
 - **Randomness is demo-grade.** The seed mixes the previous blockhash, `prevrandao`, timestamp, a user-supplied seed and the request id, and we block contract callers. A validator could still bias it. The production fix is commit/reveal or Pyth Entropy; it's on our roadmap.
 - **This is gambling-adjacent.** Testnet only, free faucet MON, mock tokens, odds published. Going live would need licensing, age checks and geo-restrictions first, and real tokens would make it a financial product.
-- **Published house edge.** 4% (EV 0.96x) keeps it sustainable, and it's set by one constant in the Core formula (`9500`); `10000` would centre the EV on 1.0x.
+- **Published house edge.** ~3.3% (EV 0.967x) keeps it sustainable; it comes straight from the public tier table, so shifting any tier's range moves it.
 
 ## If something breaks during the demo
 

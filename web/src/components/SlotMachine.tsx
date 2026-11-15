@@ -62,7 +62,7 @@ export function SlotMachine({
   }, [result, reduced]);
 
   const symbols = result ? reelSymbolsForTier(result.tier) : (['🪙', '🪙', '🪙'] as const);
-  const jackpot = result?.tier === 'JACKPOT' && stopped === 3;
+  const jackpot = result?.tier === 'ULTRA_LEGENDARY' && stopped === 3;
 
   return (
     <motion.div

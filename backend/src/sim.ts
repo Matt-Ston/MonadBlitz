@@ -1,5 +1,5 @@
 // `pnpm sim [draws]`: Monte Carlo of the §3.3 draw using Math.random (same rules, not bit-exact with Solidity).
-import { TIER_TABLE } from './odds.js';
+import { BOOSTED_TIERS, TIER_TABLE } from './odds.js';
 import { TIERS, type Tier } from './types.js';
 
 const N = Number(process.argv[2] || 200_000);
@@ -17,23 +17,17 @@ function draw() {
   const tierIdx = TIER_TABLE.findIndex((row) => t < row.upperBound);
   const tier = TIERS[tierIdx];
 
-  let multBps: number;
-  if (tier === 'CORE') {
-    let s = 0;
-    for (let j = 0; j < 12; j++) s += rand(0x10000);
-    multBps = 9500 + Math.trunc(((s - 393210) * 800) / 65536);
-  } else {
-    const { minMultBps, maxMultBps } = TIER_TABLE[tierIdx];
-    multBps = minMultBps + rand(maxMultBps - minMultBps + 1);
-  }
+  // Step 2: multiplier uniform in the tier's [min, max].
+  const { minMultBps, maxMultBps } = TIER_TABLE[tierIdx];
+  const multBps = minMultBps + rand(maxMultBps - minMultBps + 1);
 
-  // Steps 4–5: rarities and split weights (slot 9 is forced Legendary and boosted on BIG_WIN/JACKPOT).
+  // Steps 4–5: rarities and split weights (slot 9 is forced Legendary and boosted on LEGENDARY/ULTRA_LEGENDARY packs).
   const rarities: number[] = [];
   const weights: number[] = [];
   for (let i = 0; i < 10; i++) {
     const x = rand(10_000);
     let r = x < C_CUT ? 0 : x < R_CUT ? 1 : x < E_CUT ? 2 : 3;
-    const boosted = i === 9 && (tier === 'BIG_WIN' || tier === 'JACKPOT');
+    const boosted = i === 9 && BOOSTED_TIERS.includes(tier);
     if (boosted) r = 3;
     rarities.push(r);
     weights.push((50 + rand(101)) * RARITY_MUL[r] * (boosted ? 4 : 1));
@@ -44,7 +38,7 @@ function draw() {
   return { tier, multBps, rarities, topShare, values };
 }
 
-const tierCount: Record<Tier, number> = { BIG_LOSS: 0, CORE: 0, BIG_WIN: 0, JACKPOT: 0 };
+const tierCount = Object.fromEntries(TIERS.map((t) => [t, 0])) as Record<Tier, number>;
 const rarityCount = [0, 0, 0, 0];
 const mults = new Float64Array(N);
 const rarityValue = [0, 0, 0, 0];
@@ -80,9 +74,9 @@ console.log(`Pack beats its price  ${pct(profit / N)}`);
 console.log(`Median multiplier     ${mult(q(0.5))}   (p5 ${mult(q(0.05))}, p95 ${mult(q(0.95))}, p99 ${mult(q(0.99))})`);
 console.log(`Best / worst          ${mult(mults[N - 1])} / ${mult(mults[0])}\n`);
 
-console.log('Tier        target    simulated');
+console.log('Tier             target    simulated');
 TIER_TABLE.forEach((row) => {
-  const label = row.tier.padEnd(10);
+  const label = row.tier.padEnd(15);
   console.log(`${label}  ${pct(row.probabilityBps / 10000).padStart(7)}   ${pct(tierCount[row.tier] / N).padStart(7)}`);
 });
 

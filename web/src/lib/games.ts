@@ -1,4 +1,5 @@
 import type { Odds, Tier } from '@/lib/sdk';
+import { TIER_INFO } from '@/lib/ui';
 
 /**
  * COSMETIC ONLY. The slot reels and the wheel are a different skin over the exact same on-chain draw as the
@@ -8,10 +9,12 @@ import type { Odds, Tier } from '@/lib/sdk';
  */
 export function reelSymbolsForTier(tier: Tier): [string, string, string] {
   switch (tier) {
-    case 'JACKPOT': return ['👑', '👑', '👑'];
-    case 'BIG_WIN': return ['💎', '💎', '7️⃣'];
-    case 'CORE': return ['🪙', '7️⃣', '🪙'];
-    case 'BIG_LOSS': return ['🪙', '💀', '🪙'];
+    case 'ULTRA_LEGENDARY': return ['👑', '👑', '👑'];
+    case 'LEGENDARY': return ['7️⃣', '7️⃣', '7️⃣'];
+    case 'EPIC': return ['💎', '💎', '💎'];
+    case 'RARE': return ['⭐', '⭐', '🍀'];
+    case 'UNCOMMON': return ['🪙', '🔔', '🪙'];
+    case 'COMMON': return ['🪙', '💀', '🍀'];
   }
 }
 
@@ -20,16 +23,13 @@ export const REEL_FILLER = ['🪙', '💎', '7️⃣', '👑', '💀', '🍀', '
 
 export interface WheelSegment { tier: Tier; label: string; startDeg: number; endDeg: number; color: string }
 
-const WHEEL_COLOR: Record<Tier, string> = {
-  BIG_LOSS: '#52525b', CORE: '#0ea5e9', BIG_WIN: '#10b981', JACKPOT: '#fbbf24',
-};
 
 /** Segment sizes come from the live odds, never hardcoded: the wheel is as honest as the odds page. */
 export function buildWheelSegments(odds: Odds): WheelSegment[] {
   let deg = 0;
   return odds.rows.map((r) => {
     const span = (r.probabilityBps / 10000) * 360;
-    const seg = { tier: r.tier, label: r.tier, startDeg: deg, endDeg: deg + span, color: WHEEL_COLOR[r.tier] };
+    const seg = { tier: r.tier, label: TIER_INFO[r.tier].short, startDeg: deg, endDeg: deg + span, color: TIER_INFO[r.tier].glow };
     deg += span;
     return seg;
   });
@@ -37,9 +37,13 @@ export function buildWheelSegments(odds: Odds): WheelSegment[] {
 
 /** Tier confetti, same look as the pack reveal. */
 export async function celebrateTier(tier: Tier) {
-  if (tier !== 'BIG_WIN' && tier !== 'JACKPOT') return;
+  if (tier === 'COMMON' || tier === 'UNCOMMON' || tier === 'RARE') return;
   const confetti = (await import('canvas-confetti')).default;
-  if (tier === 'BIG_WIN') {
+  if (tier === 'EPIC') {
+    confetti({ particleCount: 60, spread: 70, origin: { y: 0.6 }, colors: ['#d946ef', '#c084fc', '#ffffff'] });
+    return;
+  }
+  if (tier === 'LEGENDARY') {
     confetti({ particleCount: 120, spread: 80, origin: { y: 0.6 } });
     return;
   }

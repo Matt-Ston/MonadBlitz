@@ -2,18 +2,21 @@
 import { useEffect } from 'react';
 import { motion } from 'framer-motion';
 import type { Tier } from '@/lib/sdk';
+import { isBigWin } from '@/lib/ui';
 
-/** Foreshadow colour: wins glow hot before any card is shown; everything else gets the normal violet. */
+/** Foreshadow colour: Epic and up glow hot before any card is shown; everything else gets the normal violet. */
 const TEAR_GLOW: Record<Tier, string> = {
-  BIG_LOSS: '#836EF9',
-  CORE: '#836EF9',
-  BIG_WIN: '#fb7185',
-  JACKPOT: '#fde047',
+  COMMON: '#836EF9',
+  UNCOMMON: '#836EF9',
+  RARE: '#836EF9',
+  EPIC: '#d946ef',
+  LEGENDARY: '#fde047',
+  ULTRA_LEGENDARY: '#f472b6',
 };
 
 /** The pack rips open: it trembles, glows, the top flap tears off, then it bursts into light. */
 export function PackTear({ tier, onDone }: { tier: Tier; onDone: () => void }) {
-  const big = tier === 'BIG_WIN' || tier === 'JACKPOT';
+  const big = isBigWin(tier);
   const color = TEAR_GLOW[tier];
   const dur = big ? 2.0 : 1.3;
 
