@@ -4,7 +4,11 @@ import { TIERS, type Tier } from './types.js';
 
 const N = Number(process.argv[2] || 200_000);
 const RARITY_NAMES = ['Common', 'Rare', 'Epic', 'Legendary'];
-const RARITY_MUL = [10, 15, 25, 40];
+// Value-split weight per rarity (§3.3 step 5). Try alternatives: RARITY_MUL=5,15,60,200 pnpm sim
+const RARITY_MUL = (process.env.RARITY_MUL || '10,15,25,40').split(',').map(Number);
+// Rarity roll cutoffs on r % 10000 (§3.3 step 4): Common below the 1st, Rare below the 2nd, Epic below the 3rd.
+// Try alternatives: RARITY_CUTS=7000,9300,9900 pnpm sim
+const [C_CUT, R_CUT, E_CUT] = (process.env.RARITY_CUTS || '6000,8800,9800').split(',').map(Number);
 
 const rand = (n: number) => Math.floor(Math.random() * n);
 
@@ -28,7 +32,7 @@ function draw() {
   const weights: number[] = [];
   for (let i = 0; i < 10; i++) {
     const x = rand(10_000);
-    let r = x < 6000 ? 0 : x < 8800 ? 1 : x < 9800 ? 2 : 3;
+    let r = x < C_CUT ? 0 : x < R_CUT ? 1 : x < E_CUT ? 2 : 3;
     const boosted = i === 9 && (tier === 'BIG_WIN' || tier === 'JACKPOT');
     if (boosted) r = 3;
     rarities.push(r);
@@ -36,13 +40,16 @@ function draw() {
   }
   const total = weights.reduce((a, b) => a + b, 0);
   const topShare = Math.max(...weights) / total;
-  return { tier, multBps, rarities, topShare };
+  const values = weights.map((w) => (multBps / 10000) * (w / total)); // in units of pack price
+  return { tier, multBps, rarities, topShare, values };
 }
 
 const tierCount: Record<Tier, number> = { BIG_LOSS: 0, CORE: 0, BIG_WIN: 0, JACKPOT: 0 };
 const rarityCount = [0, 0, 0, 0];
 const mults = new Float64Array(N);
-let sum = 0, within5 = 0, profit = 0, legendaryPacks = 0, topShareSum = 0;
+const rarityValue = [0, 0, 0, 0];
+let epicPacks = 0;
+let sum = 0, within5 = 0, profit = 0, legendaryPacks = 0, topShareSum = 0, totalValue = 0;
 
 for (let k = 0; k < N; k++) {
   const d = draw();
@@ -51,8 +58,13 @@ for (let k = 0; k < N; k++) {
   sum += d.multBps;
   if (d.multBps >= 9500 && d.multBps <= 10500) within5++;
   if (d.multBps > 10000) profit++;
-  d.rarities.forEach((r) => rarityCount[r]++);
+  d.rarities.forEach((r, i) => {
+    rarityCount[r]++;
+    rarityValue[r] += d.values[i];
+    totalValue += d.values[i];
+  });
   if (d.rarities.includes(3)) legendaryPacks++;
+  if (d.rarities.some((r) => r >= 2)) epicPacks++;
   topShareSum += d.topShare;
 }
 mults.sort();
@@ -74,7 +86,12 @@ TIER_TABLE.forEach((row) => {
   console.log(`${label}  ${pct(row.probabilityBps / 10000).padStart(7)}   ${pct(tierCount[row.tier] / N).padStart(7)}`);
 });
 
-console.log('\nCards by rarity (all slots)');
-rarityCount.forEach((c, r) => console.log(`${RARITY_NAMES[r].padEnd(10)}  ${pct(c / (N * 10)).padStart(7)}`));
-console.log(`\nPacks with ≥1 Legendary  ${pct(legendaryPacks / N)}`);
+console.log(`\nRarity      cards    share of value   avg card value   (weights ${RARITY_MUL.join('/')})`);
+rarityCount.forEach((c, r) =>
+  console.log(
+    `${RARITY_NAMES[r].padEnd(10)}  ${pct(c / (N * 10)).padStart(7)}  ${pct(rarityValue[r] / totalValue).padStart(14)}   ${(rarityValue[r] / c).toFixed(3).padStart(10)}x pack`,
+  ),
+);
+console.log(`\nPacks with ≥1 Legendary  ${pct(legendaryPacks / N)}  (1 in ${Math.round(N / legendaryPacks)})`);
+console.log(`Packs with ≥1 Epic+     ${pct(epicPacks / N)}  (1 in ${Math.round(N / epicPacks)})`);
 console.log(`Avg share of value in the best card  ${pct(topShareSum / N)}`);
