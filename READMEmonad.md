@@ -2,7 +2,7 @@
 
 > Working name "CoinPack". Rename freely; nothing depends on the name.
 > Target: Monad Blitz hackathon, Monad **testnet** (EVM), team of 4, **3 hours total**.
-> Doc version: **v2.0** (2026-11-15). v2 cuts scope for a 3-hour build (see §13). Bump the version when any §3 interface changes.
+> Doc version: **v2.1** (2026-11-15). v2 cuts scope for a 3-hour build (see §13). v2.1 adds the §15 integration checklist (additive; §3 shapes unchanged). Bump the version when any §3 interface changes.
 
 ---
 
@@ -16,6 +16,7 @@ You are one of four Claude instances helping a 4-person team that has **3 hours*
 4. **Build against mocks first** (§3.10) so nobody waits on anybody.
 5. **[PROPOSAL]** marks a default chosen by the doc author. Use it as written.
 6. **Time is the constraint.** Do the MVP list in order, hit your checkpoint times (§10), and prefer the simplest working code over polish. Don't add tests, abstractions or features beyond what's listed. Only start Stretch after your MVP works end to end.
+7. **Read §15 (Integration checklist) before writing code, and again after every `git pull`.** Where §15 is more specific than §5–§8, §15 wins. Do the unchecked items for your person, and when you finish one, tick its box (`[x]`) in the same commit as the code. That one-line edit to §15 is the only change you may make outside your own folder.
 
 | Person | Role | Owns folder | Section | On critical path? |
 |---|---|---|---|---|
@@ -548,4 +549,57 @@ Paying money for a random payout is gambling or close to it in most places (loot
 
 ## 14. Prompt to paste into your Claude
 
-> I am Person N on a 4-person hackathon team with a 3-hour build. Attached is our ARCHITECTURE.md. Build only Section [5/6/7/8] and only write files inside `[contracts/ | backend/ | web/ | sdk/ and root files]`. Treat Section 3 as frozen. Work through the MVP list in order and keep to the checkpoint times, use the mocks in 3.10 until the other sections are ready, and ask me instead of changing another folder.
+> I am Person N on a 4-person hackathon team with a 3-hour build. Attached is our ARCHITECTURE.md. Build only Section [5/6/7/8] and only write files inside `[contracts/ | backend/ | web/ | sdk/ and root files]`. Treat Section 3 as frozen. Read Section 15 first and do my person's unchecked items there; it overrides conflicting details in my section. Work through the MVP list in order and keep to the checkpoint times, use the mocks in 3.10 until the other sections are ready, and ask me instead of changing another folder.
+
+---
+
+## 15. Integration checklist (v2.1, read before coding)
+
+These rules exist so the four folders fit together on the first try. They're additive: no §3 shape changes. Tick `[x]` when an item is done (rule 0.7).
+
+### 15.1 Status snapshot (update when you push)
+| Person | Pushed | Still missing |
+|---|---|---|
+| P1 contracts | nothing yet | everything in §5. **Blocking:** `IPackVault.sol`, ABIs, placeholder `deployments/monad-testnet.json` |
+| P2 backend | all 4 routes, price loop (serves **on-chain oracle prices** once live), feed, sim, PITCH.md | switch to sdk types (15.4) |
+| P3 web | all 3 pages, reveal, running on `web/src/lib/sdk-stub.tsx` | switch to `@coinpack/sdk` (15.5) |
+| P4 sdk + root | workspace, root files, sdk in mock mode | shared constants + ABI (15.2), real mode (15.3), env, Vercel |
+
+### 15.2 One source of truth (P4 creates, everyone imports)
+Today the catalog, odds table and §3.7 types are copy-pasted in `backend/src/{config,types,odds}.ts`, `web/src/lib/sdk-stub.tsx` and `sdk/src/mock.ts`. Stop copying; import instead.
+- [ ] **P4:** `sdk/src/constants.ts`: `CATALOG_SNAPSHOT` (§3.4 rows incl. `coingeckoId`, `usd`, `color`), `ODDS_TABLE` / `ODDS` (§3.3), `PACK_PRICE_WEI`, `CHAIN_ID = 10143`. No React imports.
+- [ ] **P4:** `sdk/src/abi.ts`: viem `as const` (or `parseAbi`) for `openPack`, `packPrice`, `nextRequestId`, `catalog`, `PackOpened`, `getPrice`, `setPrices`, `updater`, ERC-20 `balanceOf`. Typed `as const` ABIs give typed event decoding; JSON imports from `contracts/abi/` don't. The sdk then needs only the **addresses** from P1, not the ABI files.
+- [ ] **P4:** `sdk/package.json` `"exports"`: `"."` → `src/index.ts`, `"./types"` → `src/types.ts`, `"./constants"` → `src/constants.ts`, `"./abi"` → `src/abi.ts`. The subpaths must stay **React/wagmi-free** so the Node backend can import them.
+- **Rule for everyone:** if you need a catalog row, tier number, type or ABI fragment, import it from `@coinpack/sdk/{types,constants,abi}`. Never paste it again.
+
+### 15.3 SDK real mode (P4), behaviours the web already relies on
+- [ ] `useOpenPack`: pass viem's error through **unchanged** (web matches `error.message` for "insufficient funds" / "rejected"). Don't pad the gas limit: Monad charges the full gas limit, so let viem estimate.
+- [ ] After `PackOpened` is parsed: **invalidate the `useHoldings` query** and **prepend the result to `useRecentFeed` locally**. The backend only polls every 2 s, and the web never calls `refetch()` itself.
+- [ ] `useHoldings` and `useCatalog` (fallback path): take `priceWei` from `PriceOracle.getPrice` via multicall, not from CoinGecko, so collection values match what the vault minted. Use the backend only for `priceUsd` (it already serves on-chain prices once live).
+- [ ] Provider: wagmi `ssr: true`; import `@rainbow-me/rainbowkit/styles.css` inside the sdk; re-export RainbowKit's `ConnectButton` in real mode.
+- [ ] `MOCK` must read `process.env.NEXT_PUBLIC_MOCK` **literally** (Next only inlines literal reads, including inside transpiled packages).
+- [ ] **Env location:** Next reads `.env*` from `web/`, not the repo root. Either have the root `dev` script pass the vars, or document `web/.env.local`. (Tell P3 if `next.config.js` needs a line, because P3 owns it.) Fix the root README, which currently says `cp .env.example .env` at the root.
+- [ ] Rename `READMEmonad.md` → `ARCHITECTURE.md` (the name §3.1 and the sdk comments use) and update the README link.
+- [ ] **Do one Vercel deploy as soon as the sdk switch is in, not at 2:30.** Root dir `web`, install from the workspace root, "include files outside root directory" on (the sdk imports `../../contracts/deployments/*.json`).
+
+### 15.4 Backend (P2)
+- [ ] Once 15.2 lands: replace `backend/src/types.ts` and the copied `SNAPSHOT` / tier table with imports from `@coinpack/sdk/types` and `@coinpack/sdk/constants`; add `"@coinpack/sdk": "workspace:*"`. Keep backend-only fields (e.g. `upperBound`) local.
+- [ ] Share `packOpenedEvent` / oracle ABI from `@coinpack/sdk/abi` instead of local `parseAbi` strings, so an event change can't drift.
+
+### 15.5 Web (P3)
+- [ ] When P4 says real mode is ready: in `web/src/lib/sdk.ts` swap to `export * from '@coinpack/sdk'`, add `"@coinpack/sdk": "workspace:*"` to `web/package.json`, `pnpm install` **from the root**.
+- [ ] Delete any local `web/node_modules`, `web/package-lock.json` and `web/.next` from pre-workspace npm installs before the first root `pnpm install` (mixed lockfiles break resolution).
+- [ ] Keep `sdk-stub.tsx` until real mode passes 15.7, then delete it.
+
+### 15.6 Contracts (P1)
+- [ ] Push `IPackVault.sol`, ABIs and placeholder deployment JSON **first**; everyone else is waiting on the shape.
+- [ ] Deploy script sets snapshot prices **before** any `openPack` (a `priceWei` of 0 divides by zero inside `openPack`). Consider `require(price > 0)` with a clear error.
+- [ ] Oracle updater = `0x1FD608aa75ec266B98002B3a0f9B2Ea1bd712784` (P2's published address).
+- [ ] Write the real `deployBlock`, because the backend feed scans from it in 100-block chunks.
+- [ ] Deployment JSON `tokens[]` must include `symbol`, `name`, `rarity`, `address`, `coingeckoId`, `color` in §3.4 order; sdk and backend both read it, with lowercase addresses.
+
+### 15.7 Integration order and smoke test
+1. P1 pushes the interface → P4 finishes 15.2 → P2 and P3 switch imports (mock mode must still work: `pnpm dev:mock`).
+2. P1 deploys and commits the real JSON → everyone `git pull` (the backend hot-reloads it; restart `pnpm dev` for web).
+3. Smoke test: `pnpm typecheck` at the root passes; `curl localhost:4000/api/catalog` shows real addresses; open one pack in the browser on testnet; the reveal total equals `totalValueWei`; the collection shows the 10 tokens without a reload; the ticker shows the pack.
+4. Vercel deploy (real) + mock backup build.
