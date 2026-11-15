@@ -15,7 +15,7 @@ export function Connect() {
     );
   }
   return (
-    <div className="inline-flex items-center gap-1 rounded-full border border-line bg-panel px-4 py-2 text-sm font-medium text-white/90">
+    <div className="inline-flex items-center gap-1 whitespace-nowrap rounded-full border border-line bg-panel px-3 py-1.5 text-xs font-medium text-white/90 sm:px-4 sm:py-2 sm:text-sm">
       <ConnectButton />
     </div>
   );

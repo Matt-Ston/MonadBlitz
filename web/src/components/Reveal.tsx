@@ -5,15 +5,15 @@ import type { PackResult, TokenInfo } from '@/lib/sdk';
 import { formatMon, pctChange, sortPullsForReveal } from '@/lib/sdk';
 import {
   EXPLORER_URL, MYTHIC, RARITY_GLOW, RARITY_LABEL, RARITY_TEXT, TIER_INFO, ULTRA,
-  displayRarity, findToken, formatUsd, usdForMon, wholeUnits, type DisplayRarity,
+  displayRarity, findToken, formatCoin, formatUsd, usdForMon, type DisplayRarity,
 } from '@/lib/ui';
 import { Card } from './Card';
 import { PackTear } from './PackTear';
 
-// Spotlight timeline per card: enter → (charge if rare) → flip → hold → fly into the grid.
-const ENTER_MS = 280;
+// Manual spotlight per card: face-down → (tap) → charge if rare → face-up → (tap/swipe) → fly into the grid.
 const CHARGE_MS: Record<DisplayRarity, number> = { 0: 0, 1: 0, 2: 350, 3: 1100, 4: 1700, 5: 2600 };
-const HOLD_MS: Record<DisplayRarity, number> = { 0: 450, 1: 550, 2: 800, 3: 1300, 4: 1700, 5: 2400 };
+const SWIPE_PX = 80;
+type Phase = 'down' | 'charging' | 'up';
 
 async function celebrate(tier: PackResult['tier']) {
   if (tier !== 'BIG_WIN' && tier !== 'JACKPOT') return;
@@ -54,25 +54,22 @@ export function Reveal({ result, catalog, onAgain }: { result: PackResult; catal
 
   const [torn, setTorn] = useState(!!reduced);
   const [cur, setCur] = useState(0);            // index of the card in the spotlight
-  const [flipped, setFlipped] = useState(false); // spotlight card face-up?
+  const [phase, setPhase] = useState<Phase>('down'); // spotlight card state
   const [skipped, setSkipped] = useState(false);
   const [flash, setFlash] = useState<{ id: number; color: string } | null>(null);
   const spotRef = useRef<HTMLDivElement | null>(null);
   const shake = useAnimationControls();
   const done = cur >= ordered.length;
   const r = rarities[cur];
-  const charging = torn && !done && !flipped && !reduced && CHARGE_MS[r] > 0;
+  const flipped = phase === 'up';
+  const charging = torn && !done && phase === 'charging';
 
-  // Spotlight timeline for the current card.
+  // Rare cards charge up after the tap, then flip on their own.
   useEffect(() => {
-    if (!torn || done) return;
-    if (!flipped) {
-      const t = setTimeout(() => setFlipped(true), reduced ? 150 : ENTER_MS + CHARGE_MS[r]);
-      return () => clearTimeout(t);
-    }
-    const t = setTimeout(() => { setFlipped(false); setCur((n) => n + 1); }, reduced ? 350 : HOLD_MS[r]);
+    if (phase !== 'charging') return;
+    const t = setTimeout(() => setPhase('up'), CHARGE_MS[r]);
     return () => clearTimeout(t);
-  }, [torn, done, flipped, cur, r, reduced]);
+  }, [phase, r]);
 
   // Effects the moment the spotlight card flips.
   useEffect(() => {
@@ -92,23 +89,37 @@ export function Reveal({ result, catalog, onAgain }: { result: PackResult; catal
     }
   }, [done, skipped, result.tier, shake, reduced]);
 
-  /** Tap the spotlight: flip now, or send a flipped card on its way. */
+  /** Tap / swipe / Space / →: flip a face-down card, or send a face-up card into the grid. */
   function advance() {
-    if (done) return;
-    if (!flipped) setFlipped(true);
-    else { setFlipped(false); setCur((n) => n + 1); }
+    if (!torn || done || phase === 'charging') return;
+    if (phase === 'down') setPhase(!reduced && CHARGE_MS[r] > 0 ? 'charging' : 'up');
+    else { setPhase('down'); setCur((n) => n + 1); }
   }
   function revealAll() {
     setSkipped(true);
     setTorn(true);
-    setFlipped(false);
+    setPhase('down');
     setCur(ordered.length);
   }
+
+  const advanceRef = useRef(advance);
+  advanceRef.current = advance;
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === ' ' || e.key === 'ArrowRight') {
+        e.preventDefault();
+        advanceRef.current();
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
 
   // Running total of what's been revealed so far.
   const revealedCount = cur + (flipped ? 1 : 0);
   const revealedWei = ordered.slice(0, revealedCount).reduce((s, p) => s + BigInt(p.valueWei), 0n);
   const revealedUsd = usdForMon(revealedWei, catalog);
+  const runPct = pctChange(result.pricePaidWei, revealedWei.toString());
   const paidUsd = usdForMon(result.pricePaidWei, catalog);
   const pulledUsd = usdForMon(result.totalValueWei, catalog);
 
@@ -116,7 +127,6 @@ export function Reveal({ result, catalog, onAgain }: { result: PackResult; catal
   const tier = TIER_INFO[result.tier];
   const muted = done && result.tier === 'BIG_LOSS';
   const bestPull = ordered[rarities.indexOf(best)];
-  const bestUnits = wholeUnits(bestPull.symbol, bestPull.amount);
 
   if (!torn) {
     return (
@@ -131,7 +141,7 @@ export function Reveal({ result, catalog, onAgain }: { result: PackResult; catal
   const spot = !done ? ordered[cur] : undefined;
 
   return (
-    <motion.div animate={shake} className="flex flex-col items-center gap-5">
+    <motion.div animate={shake} className="flex flex-col items-center gap-5 pb-28">
       <AnimatePresence>
         {flash && (
           <motion.div
@@ -146,15 +156,6 @@ export function Reveal({ result, catalog, onAgain }: { result: PackResult; catal
         )}
       </AnimatePresence>
 
-      {/* running total */}
-      <div className="flex items-baseline gap-3 rounded-full border border-line bg-panel/80 px-5 py-2 text-sm">
-        <span className="text-white/50">{done ? 'Pulled' : `Card ${Math.min(cur + 1, ordered.length)} of ${ordered.length}`}</span>
-        <motion.b key={revealedWei.toString()} initial={{ scale: 1.25 }} animate={{ scale: 1 }} className="text-base">
-          {formatMon(revealedWei)} MON
-        </motion.b>
-        {revealedUsd !== undefined && <span className="text-white/60">{formatUsd(revealedUsd)}</span>}
-      </div>
-
       <LayoutGroup>
         {/* spotlight */}
         <div className="flex h-[22rem] items-center justify-center sm:h-[24rem]">
@@ -164,12 +165,18 @@ export function Reveal({ result, catalog, onAgain }: { result: PackResult; catal
                 key={`${result.requestId}-${spot.slot}`}
                 layoutId={`card-${spot.slot}`}
                 ref={spotRef}
-                onClick={advance}
-                className="w-52 cursor-pointer sm:w-60"
+                onTap={advance}
+                drag={flipped ? 'x' : false}
+                dragSnapToOrigin
+                dragElastic={0.6}
+                onDragEnd={(_, info) => {
+                  if (Math.abs(info.offset.x) > SWIPE_PX || Math.abs(info.velocity.x) > 600) advance();
+                }}
+                className="w-52 cursor-pointer touch-pan-y select-none sm:w-60"
                 initial={reduced ? false : { opacity: 0, y: -80, scale: 0.6, rotate: -8 }}
                 animate={{ opacity: 1, y: 0, scale: 1, rotate: 0 }}
                 transition={{ type: 'spring', stiffness: 260, damping: 22 }}
-                title="Tap to flip / next"
+                title={flipped ? 'Swipe or tap for next' : 'Tap to flip'}
               >
                 <Card
                   pull={spot}
@@ -194,6 +201,17 @@ export function Reveal({ result, catalog, onAgain }: { result: PackResult; catal
           )}
         </div>
 
+        {!done && (
+          <div className="flex items-center gap-4 text-xs text-white/40">
+            <span className="font-semibold text-white/70">
+              {phase === 'down' ? 'Tap to flip' : phase === 'charging' ? 'Something rare…' : 'Swipe for next'}
+            </span>
+            <span className="hidden sm:inline">Space / → also work</span>
+            <button onClick={revealAll} className="rounded-full border border-white/20 px-3 py-1 text-white/70 hover:bg-white/10">
+              Reveal all
+            </button>
+          </div>
+        )}
         {/* revealed cards collect here, lowest value first */}
         <div
           className={`grid w-full grid-cols-2 gap-2 transition sm:grid-cols-5 duration-700 sm:gap-3 ${muted ? 'opacity-60 saturate-50' : ''} ${
@@ -212,14 +230,6 @@ export function Reveal({ result, catalog, onAgain }: { result: PackResult; catal
         </div>
       </LayoutGroup>
 
-      {!done && (
-        <div className="flex items-center gap-4 text-xs text-white/40">
-          <span>Tap the card to flip faster</span>
-          <button onClick={revealAll} className="rounded-full border border-white/20 px-3 py-1 text-white/70 hover:bg-white/10">
-            Reveal all
-          </button>
-        </div>
-      )}
 
       {done && (
         <motion.div
@@ -235,7 +245,7 @@ export function Reveal({ result, catalog, onAgain }: { result: PackResult; catal
               className="text-sm font-bold uppercase tracking-widest"
             >
               <span className={RARITY_TEXT[best]}>{RARITY_LABEL[best]} pull</span>
-              <span className="text-white/70"> · {bestUnits.count} {bestUnits.unit}</span>
+              <span className="text-white/70"> · {formatCoin(bestPull.symbol, bestPull.amount)}</span>
             </motion.p>
           )}
           <p className="text-base sm:text-lg">
@@ -262,6 +272,30 @@ export function Reveal({ result, catalog, onAgain }: { result: PackResult; catal
           </button>
         </motion.div>
       )}
+      {/* running total, pinned to the bottom of the screen */}
+      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-ink/90 px-4 pb-[calc(0.75rem+env(safe-area-inset-bottom))] pt-3 backdrop-blur">
+        <div className="mx-auto flex max-w-5xl items-center justify-between gap-3 text-xs sm:text-sm">
+          <div className="min-w-0">
+            <div className="text-[10px] uppercase tracking-wider text-white/50 sm:text-xs">
+              {done ? 'Pulled' : <>Pulled so far<span className="hidden sm:inline"> · card</span> {Math.min(revealedCount, ordered.length)}/{ordered.length}</>}
+            </div>
+            <motion.div key={revealedWei.toString()} initial={reduced ? false : { scale: 1.15 }} animate={{ scale: 1 }} className="origin-left whitespace-nowrap font-black sm:text-base">
+              {formatMon(revealedWei)} MON
+              {revealedUsd !== undefined && <span className="block text-[10px] font-semibold text-white/60 sm:ml-1 sm:inline sm:text-sm">({formatUsd(revealedUsd)})</span>}
+            </motion.div>
+          </div>
+          <div className={`shrink-0 text-lg font-black tabular-nums sm:text-2xl ${revealedCount === 0 ? 'text-white/40' : runPct >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+            {revealedCount === 0 ? '–' : `${runPct >= 0 ? '+' : ''}${runPct.toFixed(1)}%`}
+          </div>
+          <div className="min-w-0 text-right">
+            <div className="text-[10px] uppercase tracking-wider text-white/50 sm:text-xs">Paid</div>
+            <div className="whitespace-nowrap font-black sm:text-base">
+              {formatMon(result.pricePaidWei, 2)} MON
+              {paidUsd !== undefined && <span className="block text-[10px] font-semibold text-white/60 sm:ml-1 sm:inline sm:text-sm">({formatUsd(paidUsd)})</span>}
+            </div>
+          </div>
+        </div>
+      </div>
     </motion.div>
   );
 }

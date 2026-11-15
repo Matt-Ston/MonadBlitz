@@ -47,30 +47,15 @@ export const RARITY_GLOW: Record<DisplayRarity, string[]> = {
 };
 
 /**
- * Whole-unit denominations: a pack is worth a fraction of a cent, far less than one whole coin, so each token
- * is shown as a whole number of a small unit (real sub-units where the chain has one). Display only;
- * on-chain amounts are unchanged. `exp` = decimals of one unit relative to one whole token.
+ * Real coin units: "0.00000005263 BTC". Up to 4 significant digits, never scientific notation,
+ * no sub-unit names. Ticker = symbol without the mock "m" prefix. Display only.
  */
-export const DENOMINATIONS: Record<string, { unit: string; exp: number }> = {
-  mDOGE: { unit: 'µDOGE', exp: 6 },
-  mADA: { unit: 'lovelace', exp: 6 },
-  mXRP: { unit: 'drops', exp: 6 },
-  mTRX: { unit: 'sun', exp: 6 },
-  mLINK: { unit: 'µLINK', exp: 6 },
-  mAVAX: { unit: 'µAVAX', exp: 6 },
-  mDOT: { unit: 'µDOT', exp: 6 },
-  mSOL: { unit: 'lamports', exp: 9 },
-  mBNB: { unit: 'nBNB', exp: 9 },
-  mBTC: { unit: 'msats', exp: 11 },
-  mETH: { unit: 'gwei', exp: 9 },
-  mMON: { unit: 'µMON', exp: 6 },
-};
-
-/** Token amount as a whole count of its display unit, e.g. { count: "2,631", unit: "µDOGE" }. */
-export function wholeUnits(symbol: string, amountWei: string): { count: string; unit: string } {
-  const d = DENOMINATIONS[symbol] ?? { unit: symbol, exp: 0 };
-  const n = BigInt(amountWei) / 10n ** BigInt(18 - d.exp);
-  return { count: n === 0n && BigInt(amountWei) > 0n ? '<1' : n.toLocaleString('en-US'), unit: d.unit };
+export function formatCoin(symbol: string, amountWei: string): string {
+  const n = Number(amountWei) / 1e18;
+  const ticker = symbol.replace(/^m/, '');
+  if (n === 0) return `0 ${ticker}`;
+  const amount = n.toLocaleString('en-US', { maximumSignificantDigits: 4, maximumFractionDigits: 20 });
+  return `${amount} ${ticker}`;
 }
 
 export const TIER_INFO: Record<Tier, { label: string; className: string }> = {

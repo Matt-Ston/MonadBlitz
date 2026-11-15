@@ -15,17 +15,17 @@ export function Nav() {
   return (
     <header className="sticky top-0 z-20 border-b border-line/70 bg-ink/80 backdrop-blur">
       <div className="mx-auto flex max-w-5xl items-center justify-between gap-3 px-4 py-3">
-        <div className="flex items-center gap-4 sm:gap-6">
+        <div className="flex items-center gap-2 sm:gap-6">
           <Link href="/" className="flex items-center gap-2 text-lg font-bold tracking-tight">
             <span className="inline-block h-6 w-6 rounded-md bg-gradient-to-br from-accent to-indigo-900" />
             <span className="hidden sm:inline">CoinPack</span>
           </Link>
-          <nav className="flex gap-1 text-sm">
+          <nav className="flex gap-0.5 text-xs sm:gap-1 sm:text-sm">
             {LINKS.map((l) => (
               <Link
                 key={l.href}
                 href={l.href}
-                className={`rounded-full px-3 py-1.5 transition ${
+                className={`rounded-full px-2 py-1.5 transition sm:px-3 ${
                   path === l.href ? 'bg-white/10 text-white' : 'text-white/60 hover:text-white'
                 }`}
               >

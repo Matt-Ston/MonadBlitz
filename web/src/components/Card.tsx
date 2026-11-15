@@ -4,7 +4,7 @@ import type { Pull, TokenInfo } from '@/lib/sdk';
 import { formatMon } from '@/lib/sdk';
 import {
   MYTHIC, RARITY_FRAME, RARITY_GLOW, RARITY_LABEL, RARITY_TEXT, ULTRA,
-  formatUsd, usdFor, wholeUnits, type DisplayRarity,
+  formatCoin, formatUsd, usdFor, type DisplayRarity,
 } from '@/lib/ui';
 import { TokenBadge } from './TokenBadge';
 
@@ -43,7 +43,7 @@ export function Card({
 }) {
   const r = rarity ?? pull.rarity;
   const usd = usdFor(token, pull.amount);
-  const { count, unit } = wholeUnits(pull.symbol, pull.amount);
+  const coin = formatCoin(pull.symbol, pull.amount);
   const glows = RARITY_GLOW[r];
   const glow = glows[0];
   const epic = r >= MYTHIC;
@@ -98,11 +98,11 @@ export function Card({
             <TokenBadge symbol={pull.symbol} color={token?.color ?? '#555'} size={big ? 92 : 52} />
           </div>
           <div className="relative w-full text-center leading-tight">
-            <div className={`truncate font-black ${big ? 'text-2xl' : 'text-sm sm:text-base'}`}>{count}</div>
-            {/* not uppercase: "µ" would become "Μ" and read as "M" */}
-            <div className="truncate text-[11px] font-semibold text-white/60">{unit}</div>
-            <div className="mt-0.5 text-[11px] text-white/80 sm:text-xs">{formatMon(pull.valueWei)} MON</div>
-            {usd !== undefined && <div className="text-[10px] text-white/50">{formatUsd(usd)}</div>}
+            <div className={`break-all font-black tabular-nums ${big ? 'text-lg' : 'text-[11px] sm:text-xs'}`}>{coin}</div>
+            {usd !== undefined && (
+              <div className={`font-semibold text-emerald-300/90 ${big ? 'text-sm' : 'text-[10px]'}`}>{formatUsd(usd)}</div>
+            )}
+            <div className="mt-0.5 text-[10px] text-white/50 sm:text-[11px]">{formatMon(pull.valueWei)} MON</div>
           </div>
         </div>
       </motion.div>

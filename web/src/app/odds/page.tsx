@@ -69,8 +69,8 @@ export default function OddsPage() {
           <b className="ultra-text">Ultra Legendary</b> on a jackpot (1 in 200).
         </p>
         <p>
-          A pack is worth a fraction of a cent, so each token is shown as a whole number of a small unit (msats for
-          Bitcoin, gwei for Ether, lamports for Solana, and so on).
+          A pack is worth a fraction of a cent, so each card shows the real coin amount at its live price (for
+          example 0.00000005263 BTC, about half a cent).
         </p>
         <p>
           The tokens are minted straight to your wallet and every result is emitted on-chain as a{' '}
