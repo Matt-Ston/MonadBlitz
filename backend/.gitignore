@@ -1,0 +1,6 @@
+node_modules
+.env
+.env.*
+!.env.example
+# the workspace root owns the lockfile
+pnpm-lock.yaml
