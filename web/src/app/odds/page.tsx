@@ -64,7 +64,13 @@ export default function OddsPage() {
         <p>
           That seed picks the outcome tier above, then a multiplier inside that tier&apos;s range, then 10 tokens by
           rarity (60% Common, 28% Rare, 10% Epic, 2% Legendary). It splits the pack&apos;s total value across them at
-          the current oracle price. Big wins and jackpots always include a Legendary.
+          the current oracle price. Big wins and jackpots always end on a boosted top card: a{' '}
+          <b className="text-rose-300">Mythic</b> on a big win (1 in 40 packs) and an{' '}
+          <b className="ultra-text">Ultra Legendary</b> on a jackpot (1 in 200).
+        </p>
+        <p>
+          A pack is worth a fraction of a cent, so each token is shown as a whole number of a small unit (msats for
+          Bitcoin, gwei for Ether, lamports for Solana, and so on).
         </p>
         <p>
           The tokens are minted straight to your wallet and every result is emitted on-chain as a{' '}

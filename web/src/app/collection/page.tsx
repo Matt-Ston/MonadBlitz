@@ -2,7 +2,7 @@
 import { useEffect } from 'react';
 import Link from 'next/link';
 import { formatMon, useCatalog, useConnection, useHoldings } from '@/lib/sdk';
-import { RARITY_FRAME, RARITY_LABEL, RARITY_TEXT, findToken, formatAmount, formatUsd, usdFor } from '@/lib/ui';
+import { RARITY_FRAME, RARITY_LABEL, RARITY_TEXT, findToken, formatUsd, usdFor, wholeUnits } from '@/lib/ui';
 import { TokenBadge } from '@/components/TokenBadge';
 import { Connect } from '@/components/Connect';
 
@@ -73,7 +73,7 @@ export default function CollectionPage() {
                 <TokenBadge symbol={h.symbol} color={t?.color ?? '#555'} size={56} />
                 <div className="text-sm font-semibold">{t?.name ?? h.symbol}</div>
                 <div className="text-xs text-white/80">
-                  {formatAmount(h.balance)} {h.symbol}
+                  <b>{wholeUnits(h.symbol, h.balance).count}</b> {wholeUnits(h.symbol, h.balance).unit}
                 </div>
                 <div className="text-sm font-bold">{formatMon(h.valueWei)} MON</div>
                 {usd !== undefined && <div className="text-[11px] text-white/50">{formatUsd(usd)}</div>}
