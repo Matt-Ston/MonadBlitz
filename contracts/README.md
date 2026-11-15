@@ -4,7 +4,10 @@ Foundry project for PackVault, PriceOracle and 12 MockTokens on Monad testnet (c
 
 - `src/interfaces/IPackVault.sol`: frozen interface (ARCHITECTURE §3.5)
 - `abi/*.json`: exported ABIs (`forge inspect <C> abi --json > abi/<C>.json`)
-- `deployments/monad-testnet.json`: addresses. **Zero/placeholder until deploy is announced.**
+- `deployments/monad-testnet.json`: **live on Monad testnet** (deployBlock 80040771)
+  - PackVault `0x9a8fb673ac069c8dcbc1dd0b4d44fd35a77d81cf`
+  - PriceOracle `0x15285aa8248390d45abf0a4522e0677d7fae05ee` (updater = P2 `0x1FD6…2784`)
+  - Acceptance pack: tx `0x1e5edbd1a1f28dae7cf075c2a38c5fa2dc474ab09c3de2a5d1e4bc06b7cd33c5`
 
 ## Setup
 ```

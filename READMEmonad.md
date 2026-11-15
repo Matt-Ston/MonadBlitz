@@ -560,7 +560,7 @@ These rules exist so the four folders fit together on the first try. They're add
 ### 15.1 Status snapshot (update when you push)
 | Person | Pushed | Still missing |
 |---|---|---|
-| P1 contracts | interface, ABIs, placeholder deployment JSON, full contracts + 3 passing tests | testnet deploy + real deployment JSON |
+| P1 contracts | **deployed to Monad testnet** (vault `0x9a8f…81cf`, block 80040771), real `deployments/monad-testnet.json`, ABIs, 3 passing tests, acceptance pack opened | nothing for MVP; helping P4 integrate |
 | P2 backend | all 4 routes, price loop (serves **on-chain oracle prices** once live), feed, sim, PITCH.md | switch to sdk types (15.4) |
 | P3 web | all 3 pages, reveal, running on `web/src/lib/sdk-stub.tsx` | switch to `@coinpack/sdk` (15.5) |
 | P4 sdk + root | workspace, root files, sdk in mock mode | shared constants + ABI (15.2), real mode (15.3), env, Vercel |
@@ -595,8 +595,8 @@ Today the catalog, odds table and §3.7 types are copy-pasted in `backend/src/{c
 - [x] Push `IPackVault.sol`, ABIs and placeholder deployment JSON **first**; everyone else is waiting on the shape.
 - [x] Deploy script sets snapshot prices **before** any `openPack` (a `priceWei` of 0 divides by zero inside `openPack`). Consider `require(price > 0)` with a clear error.
 - [x] Oracle updater = `0x1FD608aa75ec266B98002B3a0f9B2Ea1bd712784` (P2's published address).
-- [ ] Write the real `deployBlock`, because the backend feed scans from it in 100-block chunks.
-- [ ] Deployment JSON `tokens[]` must include `symbol`, `name`, `rarity`, `address`, `coingeckoId`, `color` in §3.4 order; sdk and backend both read it, with lowercase addresses.
+- [x] Write the real `deployBlock`, because the backend feed scans from it in 100-block chunks.
+- [x] Deployment JSON `tokens[]` must include `symbol`, `name`, `rarity`, `address`, `coingeckoId`, `color` in §3.4 order; sdk and backend both read it, with lowercase addresses.
 
 ### 15.7 Integration order and smoke test
 1. P1 pushes the interface → P4 finishes 15.2 → P2 and P3 switch imports (mock mode must still work: `pnpm dev:mock`).

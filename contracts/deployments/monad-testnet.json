@@ -1,22 +1,22 @@
 {
   "network": "monad-testnet",
   "chainId": 10143,
-  "deployBlock": 0,
-  "packVault": "0x0000000000000000000000000000000000000000",
-  "priceOracle": "0x0000000000000000000000000000000000000000",
+  "deployBlock": 80040771,
+  "packVault": "0x9a8fb673ac069c8dcbc1dd0b4d44fd35a77d81cf",
+  "priceOracle": "0x15285aa8248390d45abf0a4522e0677d7fae05ee",
   "packPriceWei": "100000000000000000",
   "tokens": [
-    { "index": 0, "symbol": "mDOGE", "name": "Mock Doge", "rarity": 0, "address": "0x00000000000000000000000000000000000000a0", "coingeckoId": "dogecoin", "color": "#C2A633" },
-    { "index": 1, "symbol": "mADA", "name": "Mock Cardano", "rarity": 0, "address": "0x00000000000000000000000000000000000000a1", "coingeckoId": "cardano", "color": "#0033AD" },
-    { "index": 2, "symbol": "mXRP", "name": "Mock XRP", "rarity": 0, "address": "0x00000000000000000000000000000000000000a2", "coingeckoId": "ripple", "color": "#23292F" },
-    { "index": 3, "symbol": "mTRX", "name": "Mock Tron", "rarity": 0, "address": "0x00000000000000000000000000000000000000a3", "coingeckoId": "tron", "color": "#EF0027" },
-    { "index": 4, "symbol": "mLINK", "name": "Mock Chainlink", "rarity": 1, "address": "0x00000000000000000000000000000000000000a4", "coingeckoId": "chainlink", "color": "#2A5ADA" },
-    { "index": 5, "symbol": "mAVAX", "name": "Mock Avalanche", "rarity": 1, "address": "0x00000000000000000000000000000000000000a5", "coingeckoId": "avalanche-2", "color": "#E84142" },
-    { "index": 6, "symbol": "mDOT", "name": "Mock Polkadot", "rarity": 1, "address": "0x00000000000000000000000000000000000000a6", "coingeckoId": "polkadot", "color": "#E6007A" },
-    { "index": 7, "symbol": "mSOL", "name": "Mock Solana", "rarity": 2, "address": "0x00000000000000000000000000000000000000a7", "coingeckoId": "solana", "color": "#9945FF" },
-    { "index": 8, "symbol": "mBNB", "name": "Mock BNB", "rarity": 2, "address": "0x00000000000000000000000000000000000000a8", "coingeckoId": "binancecoin", "color": "#F3BA2F" },
-    { "index": 9, "symbol": "mBTC", "name": "Mock Bitcoin", "rarity": 3, "address": "0x00000000000000000000000000000000000000b9", "coingeckoId": "bitcoin", "color": "#F7931A" },
-    { "index": 10, "symbol": "mETH", "name": "Mock Ether", "rarity": 3, "address": "0x00000000000000000000000000000000000000ba", "coingeckoId": "ethereum", "color": "#627EEA" },
-    { "index": 11, "symbol": "mMON", "name": "Mock Monad", "rarity": 3, "address": "0x00000000000000000000000000000000000000bb", "coingeckoId": "monad", "color": "#836EF9" }
+    {"index": 0, "symbol": "mDOGE", "name": "Mock Doge", "rarity": 0, "address": "0x310a1ca29a15b4b983a8d75e1bdab72a400cdd06", "coingeckoId": "dogecoin", "color": "#C2A633"},
+    {"index": 1, "symbol": "mADA", "name": "Mock Cardano", "rarity": 0, "address": "0x6174c866ded9742d518dccde9ef5fd0f7a465f67", "coingeckoId": "cardano", "color": "#0033AD"},
+    {"index": 2, "symbol": "mXRP", "name": "Mock XRP", "rarity": 0, "address": "0x55ee13be3f0bec4cb1688d8b86fd925edc3b3f93", "coingeckoId": "ripple", "color": "#23292F"},
+    {"index": 3, "symbol": "mTRX", "name": "Mock Tron", "rarity": 0, "address": "0xefe7aca2f9479346449b986d04694e2dc2494370", "coingeckoId": "tron", "color": "#EF0027"},
+    {"index": 4, "symbol": "mLINK", "name": "Mock Chainlink", "rarity": 1, "address": "0xe5e3a3940c5a9d7ddda28f1bc3be65b8116c661c", "coingeckoId": "chainlink", "color": "#2A5ADA"},
+    {"index": 5, "symbol": "mAVAX", "name": "Mock Avalanche", "rarity": 1, "address": "0xa58c860410ec3fb1185f3de247bd8dea7ae85642", "coingeckoId": "avalanche-2", "color": "#E84142"},
+    {"index": 6, "symbol": "mDOT", "name": "Mock Polkadot", "rarity": 1, "address": "0x1e4f864214be801eff7604f9ad669f4dd19d6865", "coingeckoId": "polkadot", "color": "#E6007A"},
+    {"index": 7, "symbol": "mSOL", "name": "Mock Solana", "rarity": 2, "address": "0x2dcf020c2420d4d3c955a76df83a22a30abd8b20", "coingeckoId": "solana", "color": "#9945FF"},
+    {"index": 8, "symbol": "mBNB", "name": "Mock BNB", "rarity": 2, "address": "0x9506dac7efe8cd58b8dcae6bb25ae72be5a7d696", "coingeckoId": "binancecoin", "color": "#F3BA2F"},
+    {"index": 9, "symbol": "mBTC", "name": "Mock Bitcoin", "rarity": 3, "address": "0x4e7afca6ee1c1588f48afee3b44a08c5bfc42493", "coingeckoId": "bitcoin", "color": "#F7931A"},
+    {"index": 10, "symbol": "mETH", "name": "Mock Ether", "rarity": 3, "address": "0xb0ab1850b1ff3e248eabbdf07fde1c046291dd4f", "coingeckoId": "ethereum", "color": "#627EEA"},
+    {"index": 11, "symbol": "mMON", "name": "Mock Monad", "rarity": 3, "address": "0xd7b4187f98fa2ec4bd6e029ef3b523d521109a67", "coingeckoId": "monad", "color": "#836EF9"}
   ]
 }
