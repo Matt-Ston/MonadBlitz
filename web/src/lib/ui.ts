@@ -112,3 +112,21 @@ export const shortAddr = (a: string) => `${a.slice(0, 6)}…${a.slice(-4)}`;
 
 export const FAUCET_URL = 'https://faucet.monad.xyz';
 export const EXPLORER_URL = 'https://testnet.monadexplorer.com';
+
+/** Short, friendly text for useOpenPack errors (shared by the pack, slots and wheel pages). */
+export function friendlyError(e?: Error): { text: string; needsMon: boolean } | null {
+  if (!e) return null;
+  const msg = e.message || String(e);
+  if (/reject|denied|cancel/i.test(msg)) return { text: 'Transaction cancelled in wallet.', needsMon: false };
+  // Custom errors from PackVault (viem puts the error name in the message).
+  if (/NotEnoughGas/.test(msg))
+    return { text: 'Gas limit too low. Let your wallet estimate gas (don’t set it manually) and try again.', needsMon: false };
+  if (/ZeroPrice/.test(msg)) return { text: 'A token in this pack has no price yet. Try again in a minute.', needsMon: false };
+  if (/CatalogEmpty/.test(msg)) return { text: 'The pack vault isn’t set up yet. Try again shortly.', needsMon: false };
+  if (/insufficient funds|insufficient balance|exceeds (the )?balance/i.test(msg))
+    return {
+      text: 'Not enough testnet MON. Each pack costs about 0.16 MON including gas (0.1 MON pack + gas reserve).',
+      needsMon: true,
+    };
+  return { text: msg.split('\n')[0].slice(0, 160), needsMon: false };
+}

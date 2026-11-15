@@ -6,6 +6,8 @@ import { Connect } from './Connect';
 
 const LINKS = [
   { href: '/', label: 'Open' },
+  { href: '/slots', label: 'Slots' },
+  { href: '/wheel', label: 'Wheel' },
   { href: '/collection', label: 'Collection' },
   { href: '/odds', label: 'Odds' },
 ];

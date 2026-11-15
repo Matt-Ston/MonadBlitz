@@ -2,28 +2,11 @@
 import { useState } from 'react';
 import type { PackResult } from '@/lib/sdk';
 import { formatMon, useCatalog, useConnection, useOpenPack, usePackPrice } from '@/lib/sdk';
-import { FAUCET_URL } from '@/lib/ui';
+import { FAUCET_URL, friendlyError } from '@/lib/ui';
 import { Pack } from '@/components/Pack';
 import { Reveal } from '@/components/Reveal';
 import { FeedTicker } from '@/components/FeedTicker';
 import { Connect } from '@/components/Connect';
-
-function friendlyError(e?: Error): { text: string; needsMon: boolean } | null {
-  if (!e) return null;
-  const msg = e.message || String(e);
-  if (/reject|denied|cancel/i.test(msg)) return { text: 'Transaction cancelled in wallet.', needsMon: false };
-  // Custom errors from PackVault (viem puts the error name in the message).
-  if (/NotEnoughGas/.test(msg))
-    return { text: 'Gas limit too low. Let your wallet estimate gas (don’t set it manually) and try again.', needsMon: false };
-  if (/ZeroPrice/.test(msg)) return { text: 'A token in this pack has no price yet. Try again in a minute.', needsMon: false };
-  if (/CatalogEmpty/.test(msg)) return { text: 'The pack vault isn’t set up yet. Try again shortly.', needsMon: false };
-  if (/insufficient funds|insufficient balance|exceeds (the )?balance/i.test(msg))
-    return {
-      text: 'Not enough testnet MON. Each pack costs about 0.16 MON including gas (0.1 MON pack + gas reserve).',
-      needsMon: true,
-    };
-  return { text: msg.split('\n')[0].slice(0, 160), needsMon: false };
-}
 
 export default function Home() {
   const { isConnected, isWrongChain, switchChain } = useConnection();
