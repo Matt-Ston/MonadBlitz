@@ -51,6 +51,9 @@ importers:
 
   web:
     dependencies:
+      '@coinpack/sdk':
+        specifier: workspace:*
+        version: link:../sdk
       canvas-confetti:
         specifier: 1.9.3
         version: 1.9.3
