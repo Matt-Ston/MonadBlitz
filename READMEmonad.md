@@ -560,7 +560,7 @@ These rules exist so the four folders fit together on the first try. They're add
 ### 15.1 Status snapshot (update when you push)
 | Person | Pushed | Still missing |
 |---|---|---|
-| P1 contracts | nothing yet | everything in §5. **Blocking:** `IPackVault.sol`, ABIs, placeholder `deployments/monad-testnet.json` |
+| P1 contracts | interface, ABIs, placeholder deployment JSON, full contracts + 3 passing tests | testnet deploy + real deployment JSON |
 | P2 backend | all 4 routes, price loop (serves **on-chain oracle prices** once live), feed, sim, PITCH.md | switch to sdk types (15.4) |
 | P3 web | all 3 pages, reveal, running on `web/src/lib/sdk-stub.tsx` | switch to `@coinpack/sdk` (15.5) |
 | P4 sdk + root | workspace, root files, sdk in mock mode | shared constants + ABI (15.2), real mode (15.3), env, Vercel |
@@ -592,7 +592,7 @@ Today the catalog, odds table and §3.7 types are copy-pasted in `backend/src/{c
 - [ ] Keep `sdk-stub.tsx` until real mode passes 15.7, then delete it.
 
 ### 15.6 Contracts (P1)
-- [ ] Push `IPackVault.sol`, ABIs and placeholder deployment JSON **first**; everyone else is waiting on the shape.
+- [x] Push `IPackVault.sol`, ABIs and placeholder deployment JSON **first**; everyone else is waiting on the shape.
 - [ ] Deploy script sets snapshot prices **before** any `openPack` (a `priceWei` of 0 divides by zero inside `openPack`). Consider `require(price > 0)` with a clear error.
 - [ ] Oracle updater = `0x1FD608aa75ec266B98002B3a0f9B2Ea1bd712784` (P2's published address).
 - [ ] Write the real `deployBlock`, because the backend feed scans from it in 100-block chunks.
