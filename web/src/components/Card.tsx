@@ -8,52 +8,75 @@ import {
 } from '@/lib/ui';
 import { TokenBadge } from './TokenBadge';
 
+/** Charge-up shake: builds from a tremble (Legendary) to a violent rattle (Ultra Legendary). */
+function chargeShake(r: DisplayRarity) {
+  if (r === ULTRA) {
+    return {
+      animate: { scale: [1, 1.06, 1.1, 1.14], x: [0, -10, 12, -14, 14, -12, 10, 0], rotate: [0, -6, 7, -8, 8, -6, 5, 0] },
+      transition: { duration: 0.32, repeat: Infinity, repeatType: 'mirror' as const },
+    };
+  }
+  if (r === MYTHIC) {
+    return {
+      animate: { scale: [1, 1.05, 1.09], x: [0, -6, 6, -8, 8, -5, 0], rotate: [0, -3, 3, -4, 4, 0] },
+      transition: { duration: 0.4, repeat: Infinity, repeatType: 'mirror' as const },
+    };
+  }
+  return {
+    animate: { scale: [1, 1.05, 1.02, 1.07], x: [0, -2, 2, -3, 3, -2, 2, 0] },
+    transition: { duration: 0.5, repeat: Infinity, repeatType: 'mirror' as const },
+  };
+}
+
 export function Card({
-  pull, token, flipped, rarity, charging = false,
+  pull, token, flipped, rarity, charging = false, big = false,
 }: {
   pull: Pull;
   token?: TokenInfo;
   flipped: boolean;
   /** Display rarity (adds Mythic / Ultra Legendary); defaults to the on-chain rarity. */
   rarity?: DisplayRarity;
-  /** Card is about to flip and is rare: glow and tremble on its back. */
+  /** Card is about to flip and is rare: glow and shake on its back. */
   charging?: boolean;
+  /** Spotlight size: bigger badge and text. */
+  big?: boolean;
 }) {
   const r = rarity ?? pull.rarity;
   const usd = usdFor(token, pull.amount);
   const { count, unit } = wholeUnits(pull.symbol, pull.amount);
-  const glow = RARITY_GLOW[r][0];
+  const glows = RARITY_GLOW[r];
+  const glow = glows[0];
   const epic = r >= MYTHIC;
+  const shake = chargeShake(r);
 
   return (
     <div className="perspective aspect-[3/4] w-full">
       <motion.div
         className="preserve-3d relative h-full w-full"
-        initial={false}
+        // Face-up cards mount already flipped (no flip replay); face-down ones must start from rest so a
+        // card that mounts already charging actually runs its shake instead of snapping to the last keyframe.
+        initial={flipped ? false : { rotateY: 0, scale: 1, x: 0, rotate: 0 }}
         animate={
           flipped
-            ? { rotateY: 180, scale: r >= 3 ? [1, epic ? 1.18 : 1.08, 1] : 1, x: 0 }
+            ? { rotateY: 180, scale: r >= 3 ? [1, epic ? 1.18 : 1.08, 1] : 1, x: 0, rotate: 0 }
             : charging
-              ? { rotateY: 0, scale: [1, 1.05, 1.02, 1.07], x: [0, -2, 2, -3, 3, -2, 2, 0] }
-              : { rotateY: 0, scale: 1, x: 0 }
+              ? { rotateY: 0, ...shake.animate }
+              : { rotateY: 0, scale: 1, x: 0, rotate: 0 }
         }
-        transition={
-          flipped
-            ? { duration: epic ? 0.9 : 0.5, ease: 'easeOut' }
-            : charging
-              ? { duration: 0.5, repeat: Infinity, repeatType: 'mirror' }
-              : { duration: 0.3 }
-        }
+        transition={flipped ? { duration: epic ? 0.9 : 0.5, ease: 'easeOut' } : charging ? shake.transition : { duration: 0.3 }}
       >
-        {/* back */}
+        {/* back: glows in the coming rarity's colour(s) while charging */}
         <motion.div
           className="backface-hidden card-back absolute inset-0 rounded-2xl border-2 border-white/10 shadow-lg"
           animate={
             charging
-              ? { boxShadow: [`0 0 0px ${glow}`, `0 0 45px ${glow}`, `0 0 20px ${glow}`], borderColor: glow }
+              ? {
+                  boxShadow: glows.slice(0, 4).map((c, i) => `0 0 ${epic ? 40 + i * 15 : 20 + i * 12}px ${c}`),
+                  borderColor: glows.slice(0, 4),
+                }
               : { boxShadow: '0 0 0px rgba(0,0,0,0)' }
           }
-          transition={charging ? { duration: 0.6, repeat: Infinity, repeatType: 'mirror' } : { duration: 0.2 }}
+          transition={charging ? { duration: r === ULTRA ? 0.8 : 0.6, repeat: Infinity, repeatType: 'mirror' } : { duration: 0.2 }}
         />
 
         {/* front */}
@@ -72,10 +95,10 @@ export function Card({
             {RARITY_LABEL[r]}
           </span>
           <div className="relative">
-            <TokenBadge symbol={pull.symbol} color={token?.color ?? '#555'} size={52} />
+            <TokenBadge symbol={pull.symbol} color={token?.color ?? '#555'} size={big ? 92 : 52} />
           </div>
           <div className="relative w-full text-center leading-tight">
-            <div className="truncate text-sm font-black sm:text-base">{count}</div>
+            <div className={`truncate font-black ${big ? 'text-2xl' : 'text-sm sm:text-base'}`}>{count}</div>
             {/* not uppercase: "µ" would become "Μ" and read as "M" */}
             <div className="truncate text-[11px] font-semibold text-white/60">{unit}</div>
             <div className="mt-0.5 text-[11px] text-white/80 sm:text-xs">{formatMon(pull.valueWei)} MON</div>

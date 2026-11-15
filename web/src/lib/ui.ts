@@ -89,7 +89,20 @@ export function formatAmount(wei: string): string {
 }
 
 export function formatUsd(n: number): string {
+  // Packs are worth fractions of a cent: keep 2 significant digits there instead of rounding to $0.0000.
+  if (n > 0 && n < 0.01) return n.toLocaleString('en-US', { style: 'currency', currency: 'USD', maximumSignificantDigits: 2 });
   return n.toLocaleString('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: n < 1 ? 4 : 2 });
+}
+
+/** USD per MON, from the catalog's mMON row (only when the backend is up). */
+export function monUsd(catalog: TokenInfo[] | undefined): number | undefined {
+  return catalog?.find((t) => t.symbol === 'mMON')?.priceUsd;
+}
+
+/** USD value of a MON wei amount, if the MON price is known. */
+export function usdForMon(wei: string | bigint, catalog: TokenInfo[] | undefined): number | undefined {
+  const p = monUsd(catalog);
+  return p === undefined ? undefined : (Number(BigInt(wei)) / 1e18) * p;
 }
 
 /** USD value of a token amount, if the catalog has a USD price. */
