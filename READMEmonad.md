@@ -562,7 +562,7 @@ These rules exist so the four folders fit together on the first try. They're add
 |---|---|---|
 | P1 contracts | **deployed to Monad testnet** (vault `0x9a8f…81cf`, block 80040771), real `deployments/monad-testnet.json`, ABIs, 3 passing tests, acceptance pack opened | nothing for MVP; helping P4 integrate |
 | P2 backend | all 4 routes, price loop (serves **on-chain oracle prices** once live), feed, sim, PITCH.md | switch to sdk types (15.4) |
-| P3 web | all 3 pages, reveal, running on `web/src/lib/sdk-stub.tsx` | switch to `@coinpack/sdk` (15.5) |
+| P3 web | all 3 pages, reveal, **switched to `@coinpack/sdk`** (mock mode verified: all 4 tiers, collection, odds), wrapper-styled ConnectButton, friendly errors for NotEnoughGas/ZeroPrice/CatalogEmpty/insufficient funds (~0.16 MON incl. gas), `web/.env.local` | real-mode smoke test (15.7) once P4 ships real mode, then delete `sdk-stub.tsx` |
 | P4 sdk + root | workspace, root files, sdk in mock mode | shared constants + ABI (15.2), real mode (15.3), env, Vercel |
 
 ### 15.2 One source of truth (P4 creates, everyone imports)
@@ -587,8 +587,8 @@ Today the catalog, odds table and §3.7 types are copy-pasted in `backend/src/{c
 - [ ] Share `packOpenedEvent` / oracle ABI from `@coinpack/sdk/abi` instead of local `parseAbi` strings, so an event change can't drift.
 
 ### 15.5 Web (P3)
-- [ ] When P4 says real mode is ready: in `web/src/lib/sdk.ts` swap to `export * from '@coinpack/sdk'`, add `"@coinpack/sdk": "workspace:*"` to `web/package.json`, `pnpm install` **from the root**.
-- [ ] Delete any local `web/node_modules`, `web/package-lock.json` and `web/.next` from pre-workspace npm installs before the first root `pnpm install` (mixed lockfiles break resolution).
+- [x] When P4 says real mode is ready: in `web/src/lib/sdk.ts` swap to `export * from '@coinpack/sdk'`, add `"@coinpack/sdk": "workspace:*"` to `web/package.json`, `pnpm install` **from the root**.
+- [x] Delete any local `web/node_modules`, `web/package-lock.json` and `web/.next` from pre-workspace npm installs before the first root `pnpm install` (mixed lockfiles break resolution).
 - [ ] Keep `sdk-stub.tsx` until real mode passes 15.7, then delete it.
 
 ### 15.6 Contracts (P1)

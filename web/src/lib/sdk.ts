@@ -1,7 +1,5 @@
 /**
  * The ONLY place the web app imports the sdk from.
- * When Person 4's @coinpack/sdk lands, swap the two lines below (and add
- * "@coinpack/sdk": "workspace:*" to web/package.json dependencies).
+ * ./sdk-stub.tsx is kept (unused) until real mode passes §15.7, then delete it.
  */
-export * from './sdk-stub';
-// export * from '@coinpack/sdk';
+export * from '@coinpack/sdk';

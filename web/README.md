@@ -21,13 +21,12 @@ pnpm build
 
 Reveal: 10 face-down cards (5x2, 2x5 on phones) flip every 350 ms in `sortPullsForReveal` order, best card last. Tap to skip. Then a summary bar and tier banner. BIG_WIN glows and fires confetti, JACKPOT fires big confetti and shakes the grid, and BIG_LOSS is muted.
 
-## Switching from the stub to the real sdk (when Person 4 says the sdk is in)
+## SDK
 
-1. `web/src/lib/sdk.ts`: comment out `export * from './sdk-stub'` and uncomment `export * from '@coinpack/sdk'`.
-2. `web/package.json`: add `"@coinpack/sdk": "workspace:*"` to `dependencies`, then `pnpm install` from the repo root.
-3. Delete `src/lib/sdk-stub.tsx` once it works, or keep it as a fallback.
+`src/lib/sdk.ts` re-exports `@coinpack/sdk` (workspace package; `next.config.js` transpiles it). Always `pnpm install` from the repo root.
+`src/lib/sdk-stub.tsx` is unused and kept only until real mode passes §15.7, then delete it.
 
-`next.config.js` already has `transpilePackages: ['@coinpack/sdk']`.
+Env: copy these into `web/.env.local` (gitignored): `NEXT_PUBLIC_MOCK=1`, `NEXT_PUBLIC_RPC_URL=https://testnet-rpc.monad.xyz`, `NEXT_PUBLIC_BACKEND_URL=http://localhost:4000`.
 
 ## Notes for Person 4
 - **Env vars:** Next.js reads `.env*` from `web/`, not the repo root. Either put `NEXT_PUBLIC_*` vars in `web/.env.local`, or set them in the root scripts (e.g. `"dev:mock": "pnpm --filter @coinpack/web dev:mock"`, which already sets `NEXT_PUBLIC_MOCK=1`).

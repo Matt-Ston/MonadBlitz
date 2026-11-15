@@ -10,6 +10,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@coinpack/sdk": "workspace:*",
     "canvas-confetti": "1.9.3",
     "framer-motion": "11.11.17",
     "next": "14.2.15",

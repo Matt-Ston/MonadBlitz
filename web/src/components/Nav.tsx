@@ -1,7 +1,8 @@
 'use client';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { ConnectButton, MOCK } from '@/lib/sdk';
+import { MOCK } from '@/lib/sdk';
+import { Connect } from './Connect';
 
 const LINKS = [
   { href: '/', label: 'Open' },
@@ -39,7 +40,7 @@ export function Nav() {
               Mock
             </span>
           )}
-          <ConnectButton />
+          <Connect />
         </div>
       </div>
     </header>

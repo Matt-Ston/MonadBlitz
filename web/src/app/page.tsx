@@ -1,18 +1,27 @@
 'use client';
 import { useState } from 'react';
 import type { PackResult } from '@/lib/sdk';
-import { ConnectButton, formatMon, useCatalog, useConnection, useOpenPack, usePackPrice } from '@/lib/sdk';
+import { formatMon, useCatalog, useConnection, useOpenPack, usePackPrice } from '@/lib/sdk';
 import { FAUCET_URL } from '@/lib/ui';
 import { Pack } from '@/components/Pack';
 import { Reveal } from '@/components/Reveal';
 import { FeedTicker } from '@/components/FeedTicker';
+import { Connect } from '@/components/Connect';
 
 function friendlyError(e?: Error): { text: string; needsMon: boolean } | null {
   if (!e) return null;
   const msg = e.message || String(e);
-  const needsMon = /insufficient|funds|balance|exceeds/i.test(msg);
   if (/reject|denied|cancel/i.test(msg)) return { text: 'Transaction cancelled in wallet.', needsMon: false };
-  if (needsMon) return { text: 'Not enough testnet MON to open a pack.', needsMon: true };
+  // Custom errors from PackVault (viem puts the error name in the message).
+  if (/NotEnoughGas/.test(msg))
+    return { text: 'Gas limit too low. Let your wallet estimate gas (don’t set it manually) and try again.', needsMon: false };
+  if (/ZeroPrice/.test(msg)) return { text: 'A token in this pack has no price yet. Try again in a minute.', needsMon: false };
+  if (/CatalogEmpty/.test(msg)) return { text: 'The pack vault isn’t set up yet. Try again shortly.', needsMon: false };
+  if (/insufficient funds|insufficient balance|exceeds (the )?balance/i.test(msg))
+    return {
+      text: 'Not enough testnet MON. Each pack costs about 0.16 MON including gas (0.1 MON pack + gas reserve).',
+      needsMon: true,
+    };
   return { text: msg.split('\n')[0].slice(0, 160), needsMon: false };
 }
 
@@ -61,7 +70,7 @@ export default function Home() {
       <div className="flex flex-col items-center gap-3">
         {!isConnected ? (
           <div className="flex flex-col items-center gap-2">
-            <ConnectButton />
+            <Connect />
             <p className="text-xs text-white/40">Connect a wallet on Monad testnet to open a pack.</p>
           </div>
         ) : isWrongChain ? (
@@ -86,7 +95,7 @@ export default function Home() {
             {err.text}{' '}
             {err.needsMon && (
               <a href={FAUCET_URL} target="_blank" rel="noreferrer" className="font-semibold underline">
-                Get MON from the faucet
+                Get at least 0.16 MON from the faucet
               </a>
             )}
           </div>

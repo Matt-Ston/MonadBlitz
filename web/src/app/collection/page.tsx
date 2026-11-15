@@ -1,20 +1,28 @@
 'use client';
+import { useEffect } from 'react';
 import Link from 'next/link';
-import { ConnectButton, formatMon, useCatalog, useConnection, useHoldings } from '@/lib/sdk';
+import { formatMon, useCatalog, useConnection, useHoldings } from '@/lib/sdk';
 import { RARITY_FRAME, RARITY_LABEL, RARITY_TEXT, findToken, formatAmount, formatUsd, usdFor } from '@/lib/ui';
 import { TokenBadge } from '@/components/TokenBadge';
+import { Connect } from '@/components/Connect';
 
 export default function CollectionPage() {
   const { address, isConnected } = useConnection();
-  const { data: holdings } = useHoldings(address);
+  const { data: holdings, refetch } = useHoldings(address);
   const { data: catalog } = useCatalog();
+
+  // Fallback until the sdk invalidates holdings after PackOpened (§15.3): refresh on arrival.
+  useEffect(() => {
+    if (address) refetch();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [address]);
 
   if (!isConnected) {
     return (
       <div className="flex flex-col items-center gap-4 pt-16 text-center">
         <h1 className="text-2xl font-bold">Your collection</h1>
         <p className="text-white/60">Connect your wallet to see the tokens you&apos;ve pulled.</p>
-        <ConnectButton />
+        <Connect />
       </div>
     );
   }
