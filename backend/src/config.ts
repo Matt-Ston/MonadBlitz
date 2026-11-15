@@ -49,8 +49,8 @@ export const SNAPSHOT = [
 export const SNAPSHOT_MON_USD = 0.05;
 export const MON_COINGECKO_ID = 'monad';
 
-/** Placeholder addresses until Person 1's deployment lands (0x…a0 + index). */
-export const placeholderAddress = (i: number): Hex => `0x${(0xa0 + i).toString(16).padStart(40, '0')}`;
+/** Placeholder addresses until Person 1's deployment lands; same as the §3.10 fixture and web mocks (0x…a0–a8, 0x…b9–bb). */
+export const placeholderAddress = (i: number): Hex => `0x${((i < 9 ? 0xa0 : 0xb0) + i).toString(16).padStart(40, '0')}`;
 
 export interface Deployment {
   network: string;

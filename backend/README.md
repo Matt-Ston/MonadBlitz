@@ -23,9 +23,13 @@ pnpm sim              # odds simulation (pass a draw count: pnpm sim 2000000)
 
 ## Behaviour
 
-- **Deployment file.** Reads `contracts/deployments/monad-testnet.json` and re-reads it whenever it changes, so after Person 1 deploys just `git pull`; no restart. Until it has real addresses, the catalog uses placeholder addresses `0x…a0`–`0x…ab` and the feed is empty.
+- **Deployment file.** Reads `contracts/deployments/monad-testnet.json` and re-reads it whenever it changes, so after Person 1 deploys just `git pull`; no restart. Until it has real addresses, the catalog uses placeholder addresses `0x…a0`–`0x…a8`, `0x…b9`–`0x…bb` (same as the web mocks) and the feed is empty.
 - **Prices.** Every 60 s fetches the 12 coins plus MON (`monad` on CoinGecko; falls back to `MON_USD_FALLBACK`). `priceWei = usd / monUsd × 1e18`. If `UPDATER_PRIVATE_KEY` is set and contracts are live, calls `PriceOracle.setPrices`. That key's address must be the oracle's updater (give it to Person 1, or have them call `setUpdater`), and it needs a little faucet MON for gas.
 - **Feed.** Polls `PackOpened` every 2 s from `deployBlock`. Monad testnet rejects `eth_getLogs` ranges over ~100 blocks, so logs are fetched in 100-block chunks (not the 1,000 in §6), and it never looks back more than ~20k blocks.
+
+## Updater address (for Person 1)
+
+`UPDATER_ADDRESS=0x1FD608aa75ec266B98002B3a0f9B2Ea1bd712784`. Set it as the `PriceOracle` updater at deploy (or `setUpdater` afterwards). The key lives only in Person 2's local `backend/.env`.
 
 ## Env
 
