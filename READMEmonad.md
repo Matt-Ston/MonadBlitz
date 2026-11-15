@@ -2,7 +2,7 @@
 
 > Working name "CoinPack". Rename freely; nothing depends on the name.
 > Target: Monad Blitz hackathon, Monad **testnet** (EVM), team of 4, **3 hours total**.
-> Doc version: **v3.0** (2026-11-15). v2 cuts scope for a 3-hour build (see §13). v2.1 adds the §15 integration checklist (additive; §3 shapes unchanged). v3.0 adopts IR-2 (six pack tiers, `contracts/INTERFACE_REQUESTS.md`) with IR-1's card odds bundled: §3.3, §3.5 `Tier`, §3.7 `Tier`/`TIERS`. Bump the version when any §3 interface changes.
+> Doc version: **v3.0** (2026-11-15). v2 cuts scope for a 3-hour build (see §13). v2.1 adds the §15 integration checklist (additive; §3 shapes unchanged). v3.0 adopts IR-2 (six pack tiers, `contracts/INTERFACE_REQUESTS.md`) with IR-1's card odds bundled: §3.3, §3.5 `Tier`, §3.7 `Tier`/`TIERS`. v3.1 adopts IR-3: 3–5 cards per pack (§3.3 steps 4–5, §3.5 event `Pull[]`). Bump the version when any §3 interface changes.
 
 ---
 
@@ -29,7 +29,7 @@ You are one of four Claude instances helping a 4-person team that has **3 hours*
 
 ## 1. Product in one paragraph
 
-A pack-opening app in the style of trading-card pack draws, except every pack holds **10 crypto tokens** instead of cards. The user pays a fixed price (0.1 testnet MON) per pack. The **total value of the 10 tokens** is random: most of the time it lands within **±5% of the pack price**, and occasionally the user hits a big loss or a big win. The tokens are minted to the user's wallet as testnet ERC-20s. Odds are public and the draw happens on-chain.
+A pack-opening app in the style of trading-card pack draws, except every pack holds **3–5 crypto tokens** instead of cards. The user pays a fixed price (0.1 testnet MON) per pack. The **total value of the tokens** is random across six public tiers, from a 0.4x Common pack to a 5–10x Ultra Legendary. The tokens are minted to the user's wallet as testnet ERC-20s. Odds are public and the draw happens on-chain.
 
 **Theme rule:** use the pack-draw *mechanic* only. No names, art, sounds or branding from any existing trading-card game. Rarity names are generic (Common, Rare, Epic, Legendary). Token art is our own generated badges (coloured circle + ticker), not official logos.
 
@@ -37,7 +37,7 @@ A pack-opening app in the style of trading-card pack draws, except every pack ho
 1. Connect wallet (Monad testnet).
 2. Click **Open Pack** (0.1 MON), confirm in wallet.
 3. Pack-shake animation while the tx mines (Monad is fast, ~1 s).
-4. 10 tokens flip one by one, lowest value first, best card last.
+4. 3–5 tokens flip one by one, lowest value first, best card last.
 5. Summary: "You paid 0.1 MON, pulled 0.1031 MON (+3.1%)", tier banner, confetti on a big win.
 6. Collection page shows token balances and their value.
 7. Odds page shows the tier table.
@@ -60,7 +60,7 @@ A pack-opening app in the style of trading-card pack draws, except every pack ho
   └──────────────────┘                       └────────────────────┘
 ```
 
-- **One transaction per pack.** `openPack` takes payment, draws the outcome, mints 10 tokens and emits `PackOpened`. The sdk parses the result straight from the tx receipt. No keeper, no pending state.
+- **One transaction per pack.** `openPack` takes payment, draws the outcome, mints 3–5 tokens and emits `PackOpened`. The sdk parses the result straight from the tx receipt. No keeper, no pending state.
 - **The backend is optional.** It pushes live prices to the oracle and serves catalog USD prices, odds and a recent-pulls feed. If it's down, prices stay at their deploy-time values and the app still works.
 - **The web app only talks to `@coinpack/sdk`**, never to viem/wagmi or the backend directly.
 
@@ -87,7 +87,7 @@ A pack-opening app in the style of trading-card pack draws, except every pack ho
 
 ---
 
-## 3. Shared interfaces (FROZEN, v3.0)
+## 3. Shared interfaces (FROZEN, v3.1)
 
 ### 3.1 Repository layout and ownership
 
@@ -136,11 +136,11 @@ Allowed cross-folder **reads**: `contracts/abi/*.json` and `contracts/deployment
 
 **Step 3.** `totalValueWei = packPrice * multBps / 10000`
 
-**Step 4: tokens.** For slot `i = 0..9`: rarity roll `x = r(10+i) % 10000`: `< 7500` Common(0), `< 9500` Rare(1), `< 9950` Epic(2), else Legendary(3). If tier is LEGENDARY or ULTRA_LEGENDARY, **slot 9 is forced Legendary**. Token = `tokensByRarity[rarity][ r(30+i) % len ]` (catalog order, §3.4).
+**Step 4: tokens.** Card count `n = 3 + r(2) % 3` (3–5, IR-3). For slot `i = 0..n-1`: rarity roll `x = r(10+i) % 10000`: `< 7500` Common(0), `< 9500` Rare(1), `< 9950` Epic(2), else Legendary(3). If tier is LEGENDARY or ULTRA_LEGENDARY, **the last slot `n-1` is forced Legendary**. Token = `tokensByRarity[rarity][ r(30+i) % len ]` (catalog order, §3.4).
 
-**Step 5: split.** `w_i = (50 + r(50+i) % 101) * RARITY_MUL[rarity_i]`, `RARITY_MUL = [4, 12, 60, 250]`; on LEGENDARY/ULTRA_LEGENDARY `w_9 *= 4`. `valueWei_i = totalValueWei * w_i / Σw` for `i < 9`; slot 9 gets the remainder. `amount_i = valueWei_i * 1e18 / priceWei(token_i)`.
+**Step 5: split.** `w_i = (50 + r(50+i) % 101) * RARITY_MUL[rarity_i]`, `RARITY_MUL = [4, 12, 60, 250]`; on LEGENDARY/ULTRA_LEGENDARY `w_{n-1} *= 4`. `valueWei_i = totalValueWei * w_i / Σw` for `i < n-1`; the last slot gets the remainder. `amount_i = valueWei_i * 1e18 / priceWei(token_i)`.
 
-**Stats** (`pnpm sim 1000000` in `backend/`, matching Person 1's 100k draws of the contract): expected value ≈ **0.967x** (house edge ≈ 3.3%); **≈ 31%** of packs beat their price; ≈ 12% within ±5%; 1 in 40 is a 2.2–4x Legendary pack, 1 in 200 a 5–10x Ultra Legendary. A Legendary card turns up in 1 pack in 13.
+**Stats** (`pnpm sim 1000000` in `backend/`, matching Person 1's 100k draws of the contract): expected value ≈ **0.967x** (house edge ≈ 3.3%); **≈ 31%** of packs beat their price; ≈ 12% within ±5%; 1 in 40 is a 2.2–4x Legendary pack, 1 in 200 a 5–10x Ultra Legendary. A Legendary card turns up in 1 pack in 20 and is worth about 2.6x the pack on average; the best card holds about half the pack's value.
 
 ### 3.4 Token catalog [PROPOSAL]
 
@@ -191,7 +191,7 @@ interface IPackVault {
         uint32 multiplierBps,
         uint256 totalValueWei,
         bytes32 seed,
-        Pull[10] pulls
+        Pull[] pulls          // 3–5 cards (IR-3; was Pull[10])
     );
 
     error WrongPayment();
@@ -255,7 +255,7 @@ export interface Pull { slot: number; token: Hex; symbol: string; rarity: Rarity
 export interface PackResult {
   requestId: string; buyer: Hex; txHash: Hex; openedAt: number;
   pricePaidWei: string; tier: Tier; multiplierBps: number; totalValueWei: string; seed: Hex;
-  pulls: Pull[];        // length 10, contract slot order
+  pulls: Pull[];        // length 3–5 (IR-3), contract slot order
 }
 
 export interface Holding { token: Hex; symbol: string; rarity: Rarity; balance: string; valueWei: string; }
@@ -518,7 +518,7 @@ Fresh clone → `pnpm install && pnpm dev:mock` runs the full UI. Real mode on t
 
 **Fallback rule:** if the testnet deploy isn't working by 1:45, demo on the mock-mode build and show the contract code and `cast` output on the explorer instead.
 
-**Definition of done:** on the hosted URL a judge connects a wallet on Monad testnet, opens a pack, watches 10 tokens reveal with the right total, sees them in the collection, and can read the odds.
+**Definition of done:** on the hosted URL a judge connects a wallet on Monad testnet, opens a pack, watches 3–5 tokens reveal with the right total, sees them in the collection, and can read the odds.
 
 ---
 
@@ -601,5 +601,5 @@ Today the catalog, odds table and §3.7 types are copy-pasted in `backend/src/{c
 ### 15.7 Integration order and smoke test
 1. P1 pushes the interface → P4 finishes 15.2 → P2 and P3 switch imports (mock mode must still work: `pnpm dev:mock`).
 2. P1 deploys and commits the real JSON → everyone `git pull` (the backend hot-reloads it; restart `pnpm dev` for web).
-3. Smoke test: `pnpm typecheck` at the root passes; `curl localhost:4000/api/catalog` shows real addresses; open one pack in the browser on testnet; the reveal total equals `totalValueWei`; the collection shows the 10 tokens without a reload; the ticker shows the pack.
+3. Smoke test: `pnpm typecheck` at the root passes; `curl localhost:4000/api/catalog` shows real addresses; open one pack in the browser on testnet; the reveal total equals `totalValueWei`; the collection shows the new tokens without a reload; the ticker shows the pack.
 4. Vercel deploy (real) + mock backup build.

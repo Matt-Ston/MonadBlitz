@@ -63,7 +63,7 @@ export function PackTear({ tier, onDone }: { tier: Tier; onDone: () => void }) {
           <div className="h-3 bg-[repeating-linear-gradient(90deg,rgba(255,255,255,0.35)_0_6px,transparent_6px_12px)]" />
         </motion.div>
         <div className="text-xs font-semibold uppercase tracking-[0.3em] text-white/70">CoinPack</div>
-        <div className="text-5xl font-black">10</div>
+        <div className="text-5xl font-black">3–5</div>
         <div className="text-xs uppercase tracking-widest text-white/70">tokens inside</div>
       </motion.div>
     </div>

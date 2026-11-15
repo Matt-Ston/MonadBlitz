@@ -3,11 +3,11 @@ import { useState } from 'react';
 import { motion } from 'framer-motion';
 import type { PackResult, TokenInfo } from '@/lib/sdk';
 import { formatMon, pctChange, sortPullsForReveal, useCatalog, useConnection, useOpenPack, usePackPrice } from '@/lib/sdk';
-import { EXPLORER_URL, FAUCET_URL, TIER_INFO, displayRarity, findToken, friendlyError } from '@/lib/ui';
+import { EXPLORER_URL, FAUCET_URL, TIER_INFO, cardGridClass, displayRarity, findToken, friendlyError } from '@/lib/ui';
 import { Card } from './Card';
 import { Connect } from './Connect';
 
-/** The 10 tokens behind a spin: same pulls as a pack, shown all at once after the machine lands. */
+/** The 3–5 tokens behind a spin: same pulls as a pack, shown all at once after the machine lands. */
 function GameResult({ result, catalog }: { result: PackResult; catalog?: TokenInfo[] }) {
   const pct = pctChange(result.pricePaidWei, result.totalValueWei);
   const tier = TIER_INFO[result.tier];
@@ -21,9 +21,9 @@ function GameResult({ result, catalog }: { result: PackResult; catalog?: TokenIn
           {pct.toFixed(1)}%
         </span>
       </p>
-      <div className="grid w-full grid-cols-2 gap-2 sm:grid-cols-5 sm:gap-3">
+      <div className={`mx-auto grid w-full gap-2 sm:gap-3 ${cardGridClass(result.pulls.length)}`}>
         {sortPullsForReveal(result.pulls).map((p) => (
-          <Card key={p.slot} pull={p} token={findToken(catalog, p.token)} flipped rarity={displayRarity(p, result.tier)} />
+          <Card key={p.slot} pull={p} token={findToken(catalog, p.token)} flipped rarity={displayRarity(p, result)} />
         ))}
       </div>
       <p className="text-xs text-white/40">

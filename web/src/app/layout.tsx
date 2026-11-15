@@ -5,7 +5,7 @@ import { Nav } from '@/components/Nav';
 
 export const metadata: Metadata = {
   title: 'CoinPack',
-  description: 'Open a pack of 10 testnet tokens on Monad. Public odds, on-chain draw.',
+  description: 'Open a pack of 3–5 testnet tokens on Monad. Public odds, on-chain draw.',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

@@ -66,7 +66,7 @@ export default function OddsPage() {
           transaction.
         </p>
         <p>
-          That seed picks the outcome tier above, then a multiplier inside that tier&apos;s range, then 10 tokens by
+          That seed picks the outcome tier above, then a multiplier inside that tier&apos;s range, then 3 to 5 tokens by
           rarity (75% Common, 20% Rare, 4.5% Epic, 0.5% Legendary). It splits the pack&apos;s total value across them at
           the current oracle price. Legendary and Ultra Legendary packs always end on a boosted top card: a{' '}
           <b className="text-rose-300">Mythic</b> on a Legendary pack (1 in 40) and an{' '}

@@ -5,10 +5,11 @@ import type { PackResult, TokenInfo } from '@/lib/sdk';
 import { formatMon, pctChange, sortPullsForReveal } from '@/lib/sdk';
 import {
   EXPLORER_URL, MYTHIC, RARITY_GLOW, RARITY_LABEL, RARITY_TEXT, TIER_INFO, ULTRA,
-  displayRarity, findToken, formatCoin, formatUsd, usdForMon, type DisplayRarity,
+  cardGridClass, displayRarity, findToken, formatCoin, formatUsd, usdForMon, type DisplayRarity,
 } from '@/lib/ui';
 import { Card } from './Card';
 import { PackTear } from './PackTear';
+import { RarityFX } from './RarityFX';
 
 // Manual spotlight per card: face-down → (tap) → charge if rare → face-up → (tap/swipe) → fly into the grid.
 const CHARGE_MS: Record<DisplayRarity, number> = { 0: 0, 1: 0, 2: 350, 3: 1100, 4: 1700, 5: 2600 };
@@ -53,7 +54,7 @@ async function burst(el: HTMLElement | null, r: DisplayRarity) {
 export function Reveal({ result, catalog, onAgain }: { result: PackResult; catalog?: TokenInfo[]; onAgain: () => void }) {
   const reduced = useReducedMotion();
   const ordered = useMemo(() => sortPullsForReveal(result.pulls), [result]);
-  const rarities = useMemo(() => ordered.map((p) => displayRarity(p, result.tier)), [ordered, result.tier]);
+  const rarities = useMemo(() => ordered.map((p) => displayRarity(p, result)), [ordered, result]);
   const best = Math.max(...rarities) as DisplayRarity;
 
   const [torn, setTorn] = useState(!!reduced);
@@ -79,6 +80,7 @@ export function Reveal({ result, catalog, onAgain }: { result: PackResult; catal
   useEffect(() => {
     if (!flipped || reduced) return;
     burst(spotRef.current, r);
+    if (r === 3) setFlash({ id: cur, color: '#fbbf24' });
     if (r >= MYTHIC) {
       setFlash({ id: cur, color: RARITY_GLOW[r][0] });
       shake.start({ x: [0, -10, 10, -8, 8, -4, 4, 0], transition: { duration: 0.6 } });
@@ -163,7 +165,8 @@ export function Reveal({ result, catalog, onAgain }: { result: PackResult; catal
 
       <LayoutGroup>
         {/* spotlight */}
-        <div className="flex h-[22rem] items-center justify-center sm:h-[24rem]">
+        <div className="relative flex h-[24rem] w-full items-center justify-center sm:h-[27rem]">
+          {spot && flipped && !reduced && <RarityFX key={`fx-${result.requestId}-${cur}`} rarity={r} />}
           <AnimatePresence mode="popLayout">
             {spot && (
               <motion.div
@@ -177,7 +180,7 @@ export function Reveal({ result, catalog, onAgain }: { result: PackResult; catal
                 onDragEnd={(_, info) => {
                   if (Math.abs(info.offset.x) > SWIPE_PX || Math.abs(info.velocity.x) > 600) advance();
                 }}
-                className="w-52 cursor-pointer touch-pan-y select-none sm:w-60"
+                className="relative z-[45] w-56 cursor-pointer touch-pan-y select-none sm:w-64"
                 initial={reduced ? false : { opacity: 0, y: -80, scale: 0.6, rotate: -8 }}
                 animate={{ opacity: 1, y: 0, scale: 1, rotate: 0 }}
                 transition={{ type: 'spring', stiffness: 260, damping: 22 }}
@@ -219,7 +222,7 @@ export function Reveal({ result, catalog, onAgain }: { result: PackResult; catal
         )}
         {/* revealed cards collect here, lowest value first */}
         <div
-          className={`grid w-full grid-cols-2 gap-2 transition sm:grid-cols-5 duration-700 sm:gap-3 ${muted ? 'opacity-60 saturate-50' : ''} ${
+          className={`mx-auto grid w-full gap-2 transition duration-700 sm:gap-3 ${cardGridClass(ordered.length)} ${muted ? 'opacity-60 saturate-50' : ''} ${
             done && glowing ? 'drop-shadow-[0_0_30px_var(--tier-glow)]' : ''
           }`}
           style={{ '--tier-glow': `${tier.glow}73` } as React.CSSProperties}

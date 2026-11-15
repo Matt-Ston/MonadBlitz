@@ -21,13 +21,15 @@ function draw() {
   const { minMultBps, maxMultBps } = TIER_TABLE[tierIdx];
   const multBps = minMultBps + rand(maxMultBps - minMultBps + 1);
 
-  // Steps 4–5: rarities and split weights (slot 9 is forced Legendary and boosted on LEGENDARY/ULTRA_LEGENDARY packs).
+  // Steps 4–5: 3–5 cards (IR-3), rarities and split weights (the last card is forced Legendary and boosted on
+  // LEGENDARY/ULTRA_LEGENDARY packs).
   const rarities: number[] = [];
   const weights: number[] = [];
-  for (let i = 0; i < 10; i++) {
+  const n = 3 + rand(3);
+  for (let i = 0; i < n; i++) {
     const x = rand(10_000);
     let r = x < C_CUT ? 0 : x < R_CUT ? 1 : x < E_CUT ? 2 : 3;
-    const boosted = i === 9 && BOOSTED_TIERS.includes(tier);
+    const boosted = i === n - 1 && BOOSTED_TIERS.includes(tier);
     if (boosted) r = 3;
     rarities.push(r);
     weights.push((50 + rand(101)) * RARITY_MUL[r] * (boosted ? 4 : 1));
@@ -40,6 +42,7 @@ function draw() {
 
 const tierCount = Object.fromEntries(TIERS.map((t) => [t, 0])) as Record<Tier, number>;
 const rarityCount = [0, 0, 0, 0];
+let totalCards = 0;
 const mults = new Float64Array(N);
 const rarityValue = [0, 0, 0, 0];
 let epicPacks = 0;
@@ -54,6 +57,7 @@ for (let k = 0; k < N; k++) {
   if (d.multBps > 10000) profit++;
   d.rarities.forEach((r, i) => {
     rarityCount[r]++;
+    totalCards++;
     rarityValue[r] += d.values[i];
     totalValue += d.values[i];
   });
@@ -83,7 +87,7 @@ TIER_TABLE.forEach((row) => {
 console.log(`\nRarity      cards    share of value   avg card value   (weights ${RARITY_MUL.join('/')})`);
 rarityCount.forEach((c, r) =>
   console.log(
-    `${RARITY_NAMES[r].padEnd(10)}  ${pct(c / (N * 10)).padStart(7)}  ${pct(rarityValue[r] / totalValue).padStart(14)}   ${(rarityValue[r] / c).toFixed(3).padStart(10)}x pack`,
+    `${RARITY_NAMES[r].padEnd(10)}  ${pct(c / totalCards).padStart(7)}  ${pct(rarityValue[r] / totalValue).padStart(14)}   ${(rarityValue[r] / c).toFixed(3).padStart(10)}x pack`,
   ),
 );
 console.log(`\nPacks with ≥1 Legendary  ${pct(legendaryPacks / N)}  (1 in ${Math.round(N / legendaryPacks)})`);

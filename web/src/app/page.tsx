@@ -40,10 +40,10 @@ export default function Home() {
     <div className="flex flex-col items-center gap-10 pt-4">
       <section className="flex flex-col items-center gap-3 text-center">
         <h1 className="text-4xl font-black tracking-tight sm:text-5xl">
-          Rip a pack. <span className="text-accent">Pull 10 tokens.</span>
+          Rip a pack. <span className="text-accent">Pull 3–5 tokens.</span>
         </h1>
         <p className="max-w-xl text-white/60">
-          Each pack holds 10 tokens. About 1 in 3 packs beats its price, and 1 in 200 is a 5–10x Ultra
+          Each pack holds 3 to 5 tokens. About 1 in 3 packs beats its price, and 1 in 200 is a 5–10x Ultra
           Legendary. The draw happens on-chain on Monad, and the odds are public.
         </p>
       </section>

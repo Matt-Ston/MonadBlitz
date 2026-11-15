@@ -1,19 +1,28 @@
 import type { Pull, Rarity, Tier, TokenInfo } from './sdk';
 
 /**
- * Display rarity: the on-chain 0–3 plus two display-only tiers. The contract forces slot 9 to Legendary on
- * LEGENDARY / ULTRA_LEGENDARY packs (IR-2); we show that card as Mythic (1 in 40 packs) or Ultra Legendary (1 in 200).
+ * Display rarity: the on-chain 0–3 plus two display-only tiers. The contract forces the pack's last card to Legendary
+ * on LEGENDARY / ULTRA_LEGENDARY packs (IR-2/IR-3); we show that card as Mythic (1 in 40 packs) or Ultra Legendary (1 in 200).
  */
 export type DisplayRarity = Rarity | 4 | 5;
 export const MYTHIC = 4;
 export const ULTRA = 5;
 
-export function displayRarity(pull: Pull, tier: Tier): DisplayRarity {
-  if (pull.rarity === 3 && pull.slot === 9) {
-    if (tier === 'ULTRA_LEGENDARY') return ULTRA;
-    if (tier === 'LEGENDARY') return MYTHIC;
+export function displayRarity(pull: Pull, pack: { tier: Tier; pulls: Pull[] }): DisplayRarity {
+  // The boosted card is the last slot: 2–4 on IR-3 vaults (3–5 cards), 9 on the old 10-card vault.
+  if (pull.rarity === 3 && pull.slot === pack.pulls.length - 1) {
+    if (pack.tier === 'ULTRA_LEGENDARY') return ULTRA;
+    if (pack.tier === 'LEGENDARY') return MYTHIC;
   }
   return pull.rarity;
+}
+
+/** Reveal-grid columns for a pack's card count (literal class names so Tailwind keeps them). */
+export function cardGridClass(n: number): string {
+  if (n <= 3) return 'grid-cols-3 max-w-xl';
+  if (n === 4) return 'grid-cols-2 sm:grid-cols-4 max-w-3xl';
+  if (n === 5) return 'grid-cols-3 sm:grid-cols-5 max-w-4xl';
+  return 'grid-cols-2 sm:grid-cols-5'; // pre-IR-3 10-card packs
 }
 
 export const RARITY_LABEL = ['Common', 'Rare', 'Epic', 'Legendary', 'Mythic', 'Ultra Legendary'] as const;

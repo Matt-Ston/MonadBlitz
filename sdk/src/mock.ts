@@ -110,20 +110,21 @@ export function makeMockResult(): PackResult {
   const total = (PACK_PRICE * BigInt(multiplierBps)) / 10000n;
   const win = tier === 'LEGENDARY' || tier === 'ULTRA_LEGENDARY';
 
-  const picks = Array.from({ length: 10 }, (_, i) => {
+  const n = rnd(3, 5); // IR-3: 3–5 cards; the last slot carries the boost on big packs
+  const picks = Array.from({ length: n }, (_, i) => {
     const x = rnd(0, 9999);
     let rarity: Rarity = x < 7500 ? 0 : x < 9500 ? 1 : x < 9950 ? 2 : 3;
-    if (i === 9 && win) rarity = 3;
+    if (i === n - 1 && win) rarity = 3;
     const pool = CATALOG.filter((t) => t.rarity === rarity);
     const token = pool[rnd(0, pool.length - 1)];
     let w = BigInt(rnd(50, 150) * RARITY_MUL[rarity]);
-    if (i === 9 && win) w *= 4n;
+    if (i === n - 1 && win) w *= 4n;
     return { token, rarity, w };
   });
   const sumW = picks.reduce((s, p) => s + p.w, 0n);
   let used = 0n;
   const pulls: Pull[] = picks.map((p, i) => {
-    const valueWei = i < 9 ? (total * p.w) / sumW : total - used;
+    const valueWei = i < n - 1 ? (total * p.w) / sumW : total - used;
     used += valueWei;
     return {
       slot: i,

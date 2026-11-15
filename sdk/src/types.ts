@@ -37,7 +37,7 @@ export interface PackResult {
   multiplierBps: number;
   totalValueWei: string;
   seed: Hex;
-  pulls: Pull[]; // length 10, contract slot order
+  pulls: Pull[]; // length 3–5 (IR-3; 10 on the pre-IR-3 vault), contract slot order
 }
 
 export interface Holding {

@@ -20,6 +20,21 @@ export const packVaultAbi = [
     inputs: [{ name: 'userSeed', type: 'bytes32' }],
     outputs: [{ name: 'requestId', type: 'uint256' }],
   },
+  // IR-3: 3–5 cards per pack (`Pull[]`). The `Pull[10]` variant below is the pre-IR-3 vault; keeping both means
+  // decoding works before and after Person 1's redeploy (viem matches each log by its own topic0).
+  {
+    type: 'event', name: 'PackOpened', anonymous: false,
+    inputs: [
+      { name: 'requestId', type: 'uint256', indexed: true },
+      { name: 'buyer', type: 'address', indexed: true },
+      { name: 'pricePaid', type: 'uint256', indexed: false },
+      { name: 'tier', type: 'uint8', indexed: false },
+      { name: 'multiplierBps', type: 'uint32', indexed: false },
+      { name: 'totalValueWei', type: 'uint256', indexed: false },
+      { name: 'seed', type: 'bytes32', indexed: false },
+      { name: 'pulls', type: 'tuple[]', indexed: false, components: pullComponents },
+    ],
+  },
   {
     type: 'event', name: 'PackOpened', anonymous: false,
     inputs: [

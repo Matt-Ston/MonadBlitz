@@ -11,9 +11,15 @@ const MAX_LOOKBACK = 20_000n;
 // Catch up gradually so the public RPC doesn't rate-limit us (chain adds ~5 blocks per tick).
 const MAX_CHUNKS_PER_TICK = 10;
 
-export const packOpenedEvent = parseAbiItem(
-  'event PackOpened(uint256 indexed requestId, address indexed buyer, uint256 pricePaid, uint8 tier, uint32 multiplierBps, uint256 totalValueWei, bytes32 seed, (address token, uint8 rarity, uint256 amount, uint256 valueWei)[10] pulls)',
-);
+// IR-3 vaults emit 3–5 cards (`Pull[]`); the pre-IR-3 vault emits `Pull[10]`. Different topic0, so listen for both.
+export const packOpenedEvents = [
+  parseAbiItem(
+    'event PackOpened(uint256 indexed requestId, address indexed buyer, uint256 pricePaid, uint8 tier, uint32 multiplierBps, uint256 totalValueWei, bytes32 seed, (address token, uint8 rarity, uint256 amount, uint256 valueWei)[] pulls)',
+  ),
+  parseAbiItem(
+    'event PackOpened(uint256 indexed requestId, address indexed buyer, uint256 pricePaid, uint8 tier, uint32 multiplierBps, uint256 totalValueWei, bytes32 seed, (address token, uint8 rarity, uint256 amount, uint256 valueWei)[10] pulls)',
+  ),
+] as const;
 
 const client = createPublicClient({ chain: monadTestnet, transport: http(env.rpcUrl) });
 
@@ -56,7 +62,7 @@ async function tick() {
     const to = from + chunk - 1n < latest ? from + chunk - 1n : latest;
     let logs;
     try {
-      logs = await client.getLogs({ address: vault, event: packOpenedEvent, fromBlock: from, toBlock: to, strict: true });
+      logs = await client.getLogs({ address: vault, events: packOpenedEvents, fromBlock: from, toBlock: to, strict: true });
     } catch (err) {
       // Only shrink on range errors; anything else (rate limit, network) just retries next tick.
       if (chunk > 1n && /range|too large|limit exceeded/i.test(String(err))) { chunk /= 2n; continue; }
