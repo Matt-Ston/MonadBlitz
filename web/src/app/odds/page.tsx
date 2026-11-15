@@ -54,6 +54,10 @@ export default function OddsPage() {
         </div>
       </div>
 
+      <p className="text-sm text-white/70">
+        The house edge is about 4%: on average a pack returns 0.96x its price, and about 1 in 4 packs profits.
+      </p>
+
       <div className="space-y-3 text-sm leading-relaxed text-white/70">
         <h2 className="text-base font-semibold text-white">How the draw works</h2>
         <p>
@@ -63,7 +67,7 @@ export default function OddsPage() {
         </p>
         <p>
           That seed picks the outcome tier above, then a multiplier inside that tier&apos;s range, then 10 tokens by
-          rarity (60% Common, 28% Rare, 10% Epic, 2% Legendary). It splits the pack&apos;s total value across them at
+          rarity (75% Common, 20% Rare, 4.5% Epic, 0.5% Legendary). It splits the pack&apos;s total value across them at
           the current oracle price. Big wins and jackpots always end on a boosted top card: a{' '}
           <b className="text-rose-300">Mythic</b> on a big win (1 in 40 packs) and an{' '}
           <b className="ultra-text">Ultra Legendary</b> on a jackpot (1 in 200).

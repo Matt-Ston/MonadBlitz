@@ -60,7 +60,7 @@ export default function Home() {
           Rip a pack. <span className="text-accent">Pull 10 tokens.</span>
         </h1>
         <p className="max-w-xl text-white/60">
-          Each pack holds 10 tokens. Most packs land within ±5% of the price, and sometimes you hit a big win or a
+          Each pack holds 10 tokens. About 1 in 4 packs beats its price, and sometimes you hit a big win or a
           jackpot. The draw happens on-chain on Monad, and the odds are public.
         </p>
       </section>

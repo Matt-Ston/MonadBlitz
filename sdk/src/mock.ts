@@ -47,12 +47,12 @@ export const CATALOG: TokenInfo[] = CATALOG_SRC.map(([symbol, name, rarity, usd,
 export const ODDS: Odds = {
   rows: [
     { tier: 'BIG_LOSS', probabilityBps: 500, minMultBps: 3000, maxMultBps: 7000, meanMultBps: 5000 },
-    { tier: 'CORE', probabilityBps: 9200, minMultBps: 8600, maxMultBps: 11000, meanMultBps: 9800 },
+    { tier: 'CORE', probabilityBps: 9200, minMultBps: 6200, maxMultBps: 12900, meanMultBps: 9500 },
     { tier: 'BIG_WIN', probabilityBps: 250, minMultBps: 13000, maxMultBps: 20000, meanMultBps: 16500 },
     { tier: 'JACKPOT', probabilityBps: 50, minMultBps: 30000, maxMultBps: 50000, meanMultBps: 40000 },
   ],
-  expectedValueBps: 9880,
-  withinFivePctBps: 8600,
+  expectedValueBps: 9600,
+  withinFivePctBps: 3610,
   packPriceWei: PACK_PRICE.toString(),
 };
 
@@ -97,19 +97,19 @@ const emit = () => {
 // ---------- mock draw (follows §3.3 shape with Math.random) ----------
 const rnd = (min: number, max: number) => min + Math.floor(Math.random() * (max - min + 1));
 const randHex = (): Hex => `0x${Array.from({ length: 64 }, () => Math.floor(Math.random() * 16).toString(16)).join('')}`;
-const RARITY_MUL = [10, 15, 25, 40];
+const RARITY_MUL = [4, 12, 60, 250];
 
 export function makeMockResult(): PackResult {
   const roll = Math.random() * 100; // demo mix: CORE 88, BIG_WIN 5, JACKPOT 3, BIG_LOSS 4
   const tier: Tier = roll < 88 ? 'CORE' : roll < 93 ? 'BIG_WIN' : roll < 96 ? 'JACKPOT' : 'BIG_LOSS';
   const multiplierBps =
-    tier === 'CORE' ? rnd(9500, 10500) : tier === 'BIG_WIN' ? rnd(13000, 20000) : tier === 'JACKPOT' ? rnd(30000, 50000) : rnd(3000, 7000);
+    tier === 'CORE' ? rnd(8200, 10600) : tier === 'BIG_WIN' ? rnd(13000, 20000) : tier === 'JACKPOT' ? rnd(30000, 50000) : rnd(3000, 7000);
   const total = (PACK_PRICE * BigInt(multiplierBps)) / 10000n;
   const win = tier === 'BIG_WIN' || tier === 'JACKPOT';
 
   const picks = Array.from({ length: 10 }, (_, i) => {
     const x = rnd(0, 9999);
-    let rarity: Rarity = x < 6000 ? 0 : x < 8800 ? 1 : x < 9800 ? 2 : 3;
+    let rarity: Rarity = x < 7500 ? 0 : x < 9500 ? 1 : x < 9950 ? 2 : 3;
     if (i === 9 && win) rarity = 3;
     const pool = CATALOG.filter((t) => t.rarity === rarity);
     const token = pool[rnd(0, pool.length - 1)];

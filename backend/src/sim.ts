@@ -4,11 +4,11 @@ import { TIERS, type Tier } from './types.js';
 
 const N = Number(process.argv[2] || 200_000);
 const RARITY_NAMES = ['Common', 'Rare', 'Epic', 'Legendary'];
-// Value-split weight per rarity (§3.3 step 5). Try alternatives: RARITY_MUL=5,15,60,200 pnpm sim
-const RARITY_MUL = (process.env.RARITY_MUL || '10,15,25,40').split(',').map(Number);
+// Value-split weight per rarity (§3.3 step 5). Try alternatives: RARITY_MUL=10,15,25,40 pnpm sim
+const RARITY_MUL = (process.env.RARITY_MUL || '4,12,60,250').split(',').map(Number);
 // Rarity roll cutoffs on r % 10000 (§3.3 step 4): Common below the 1st, Rare below the 2nd, Epic below the 3rd.
-// Try alternatives: RARITY_CUTS=7000,9300,9900 pnpm sim
-const [C_CUT, R_CUT, E_CUT] = (process.env.RARITY_CUTS || '6000,8800,9800').split(',').map(Number);
+// Try alternatives: RARITY_CUTS=6000,8800,9800 pnpm sim
+const [C_CUT, R_CUT, E_CUT] = (process.env.RARITY_CUTS || '7500,9500,9950').split(',').map(Number);
 
 const rand = (n: number) => Math.floor(Math.random() * n);
 
@@ -21,7 +21,7 @@ function draw() {
   if (tier === 'CORE') {
     let s = 0;
     for (let j = 0; j < 12; j++) s += rand(0x10000);
-    multBps = 9800 + Math.trunc(((s - 393210) * 200) / 65536);
+    multBps = 9500 + Math.trunc(((s - 393210) * 800) / 65536);
   } else {
     const { minMultBps, maxMultBps } = TIER_TABLE[tierIdx];
     multBps = minMultBps + rand(maxMultBps - minMultBps + 1);
