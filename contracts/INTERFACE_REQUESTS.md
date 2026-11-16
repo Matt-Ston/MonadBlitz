@@ -176,3 +176,60 @@ Add `"bank": true` to `deployments/monad-testnet.json`. The sdk reads it (`BANK_
 - deposit → `bankOf` and `totalBanked` go up; withdrawBank sends MON back and reverts with `InsufficientBank` above the balance.
 - `openPacksFromBank(5, s)` emits 5 `PackOpened` with consecutive request ids, debits exactly `5 * packPrice`, and reverts on `count` 0 or 11.
 - owner `withdraw` can't touch `totalBanked`.
+
+---
+
+## IR-5: Hold many coins, keep the ones you want, sell the rest (§3.5, §3.7, §3.9, web)
+
+**Status:** **proposed by Person 1** (2026-11-16). Contract side is **built and tested** on Person 1's local branch `odds-6tier` (4/4 tests pass) but **not deployed**. Ship in the same redeploy as IR-2/3/4. Needs a yes from the team, then Person 4 (sdk) and Person 3 (web).
+
+**Why:** today pulled tokens just sit there, so it isn't obvious the app is a **wallet of real (testnet) ERC-20 coins**. Letting players keep favourites and sell the rest for MON gives every pull a decision, and makes "you own these coins" concrete.
+
+### Contract (Person 1, done on branch)
+```solidity
+// PackVault
+uint256 public sellFeeBps;                       // 100 = 1%, owner-settable, max 10%
+mapping(address => bool) public isCatalogToken;
+event Sold(address indexed seller, address[] tokens, uint256[] amounts, uint256 payoutWei);
+error NotCatalogToken(address token);
+error LengthMismatch();
+error InsufficientLiquidity(uint256 needed, uint256 available);
+error PayoutBelowMin(uint256 payout, uint256 minPayout);
+
+function quoteSell(address[] tokens, uint256[] amounts) view returns (uint256 payoutWei); // oracle price - fee
+function houseLiquidity() view returns (uint256);                                       // MON available to pay sellers
+function sellBack(address[] tokens, uint256[] amounts, uint256 minPayoutWei) returns (uint256 payoutWei);
+// MockToken: burn(from, amount), vault-only (vault only ever burns msg.sender's tokens)
+```
+- One transaction sells **any mix** of coins. No `approve` needed (the vault is the tokens' minter/burner).
+- Pays **MON straight to the wallet** at `PriceOracle` price minus 1%. Rounds down, so pack→sell never profits from rounding.
+- `minPayoutWei`: pass the quote from `quoteSell` so a price push between quote and tx can't short the seller (reverts `PayoutBelowMin`).
+- Pays from pack revenue. Owner should **fund the vault ~0.5 MON** at deploy so early big pulls can be sold. Reverts `InsufficientLiquidity` if short.
+- **IR-4 interaction:** `houseLiquidity()` must become `balance - totalBanked` when the bank lands, so sellers are never paid from players' banked MON. Optional later: `sellBack(..., toBank)` credits the bank instead.
+- Round-trip EV: pack 0.967x → sold 0.957x. No arbitrage.
+
+### SDK (Person 4)
+```ts
+export interface SellItem { token: Hex; amount: string }            // token wei, decimal string
+export function useSell(): {
+  quote(items: SellItem[]): Promise<bigint>;                         // quoteSell (mock: valueWei * 0.99)
+  sell(items: SellItem[]): Promise<{ txHash: Hex; payoutWei: string }>; // sellBack(tokens, amounts, quote)
+  status: 'idle' | 'signing' | 'mining' | 'done' | 'error'; error?: Error;
+};
+export function useAddToWallet(): (token: Hex) => Promise<boolean>;  // EIP-747 wallet_watchAsset (symbol, 18 decimals)
+```
+After `sell` mines: invalidate `useHoldings` and the wallet balance. Mock mode: subtract from mock holdings, add MON to the mock balance. ABI additions in `sdk/src/abi.ts`: `quoteSell`, `sellBack`, `houseLiquidity`, `sellFeeBps`, `Sold`.
+
+### Web (Person 3)
+1. **Collection → "My coins" (portfolio).** Header line: *"These are real ERC-20 tokens in your wallet (Monad testnet). Keep the ones you like, sell the rest for MON."* Each coin row/card: amount, value (MON + USD), a **Keep / Sell** toggle (default Keep) and an amount slider (25/50/100%). Sticky footer: *"Sell 3 coins → 0.0412 MON (1% fee)"* + **Sell selected**. Quick actions: **Sell all Commons**, **Sell everything except Legendary**.
+2. **After a reveal:** each card gets a small **Keep / Sell** toggle; summary bar shows *"Keep all"* (default) or *"Sell 2 for 0.0187 MON"*. Selling never blocks opening the next pack.
+3. **"Add to wallet"** button on each coin (calls `useAddToWallet`) so players see their mDOGE, mBTC… in MetaMask: the clearest proof they hold multiple coins.
+4. **Portfolio total** at the top of Collection: total value, number of different coins (`n of 12`), and the split by rarity (small bar).
+5. Copy: never say "cash out" or "win money"; it's testnet MON. Show the 1% fee next to every sell button.
+
+### Tests / acceptance
+- Contract (done): open pack → `quoteSell` of everything ≈ 99% of `totalValueWei`, never above; `sellBack` burns all, pays exactly the quote; slippage guard, non-catalog token and empty-vault cases revert.
+- App: open a pack, sell 2 of the cards from the reveal, Collection updates without reload, wallet MON goes up by the quoted amount.
+
+### Cost
+Contract: done. Deploy: part of the IR-2/3/4 redeploy, plus ~0.5 MON to fund the vault. sdk ~30 min, web ~45 min.
