@@ -15,7 +15,7 @@ const TEAR_GLOW: Record<Tier, string> = {
 };
 
 /** The pack rips open: it trembles, glows, the top flap tears off, then it bursts into light. */
-export function PackTear({ tier, onDone }: { tier: Tier; onDone: () => void }) {
+export function PackTear({ tier, onDone, priceLabel }: { tier: Tier; onDone: () => void; priceLabel?: string }) {
   const big = isBigWin(tier);
   const color = TEAR_GLOW[tier];
   const dur = big ? 2.0 : 1.3;
@@ -27,7 +27,66 @@ export function PackTear({ tier, onDone }: { tier: Tier; onDone: () => void }) {
   }, []);
 
   return (
-    <div className="relative flex h-80 items-center justify-center">
+    <div className="relative flex h-96 items-center justify-center">
+      {/* whole-screen flash the instant it bursts */}
+      <motion.div
+        className="pointer-events-none fixed inset-0 z-50"
+        style={{ background: `radial-gradient(circle at 50% 45%, #ffffff, ${color} 40%, transparent 80%)` }}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: [0, 0, 0.95, 0] }}
+        transition={{ duration: dur + 0.35, times: [0, 0.72, 0.84, 1] }}
+      />
+      {/* spinning rays that swell as the pack charges */}
+      <motion.div
+        className="absolute h-[60rem] w-[60rem] rounded-full"
+        style={{
+          background: `repeating-conic-gradient(${color}cc 0deg 6deg, transparent 6deg 18deg)`,
+          maskImage: 'radial-gradient(circle, black 10%, transparent 60%)',
+          WebkitMaskImage: 'radial-gradient(circle, black 10%, transparent 60%)',
+        }}
+        initial={{ scale: 0.1, opacity: 0, rotate: 0 }}
+        animate={{ scale: [0.1, 0.6, 1.2], opacity: [0, 0.9, 0], rotate: 200 }}
+        transition={{ duration: dur, ease: 'easeIn' }}
+      />
+      {/* sparks circling the pack, faster and faster */}
+      <motion.div className="absolute h-80 w-80" animate={{ rotate: 1080, scale: [1, 0.75, 1.5] }} transition={{ duration: dur, ease: 'easeIn' }}>
+        {Array.from({ length: 10 }, (_, i) => (
+          <span
+            key={i}
+            className="absolute left-1/2 top-1/2 h-3 w-3 rounded-full"
+            style={{
+              background: '#fff',
+              boxShadow: `0 0 14px 4px ${color}`,
+              transform: `rotate(${i * 36}deg) translateY(-9.5rem)`,
+            }}
+          />
+        ))}
+      </motion.div>
+      {/* shockwaves and a spark burst when it rips */}
+      {[0, 1, 2].map((i) => (
+        <motion.div
+          key={`ring-${i}`}
+          className="absolute h-40 w-40 rounded-full border-[6px]"
+          style={{ borderColor: i === 1 ? '#ffffff' : color, boxShadow: `0 0 30px ${color}` }}
+          initial={{ scale: 0.2, opacity: 0 }}
+          animate={{ scale: [0.2, 0.2, 5 + i * 1.5], opacity: [0, 1, 0] }}
+          transition={{ duration: dur + 0.3, times: [0, 0.74 + i * 0.03, 1], ease: 'easeOut' }}
+        />
+      ))}
+      {Array.from({ length: 30 }, (_, i) => {
+        const a = (i / 30) * Math.PI * 2;
+        const d = 260 + (i % 5) * 70;
+        return (
+          <motion.span
+            key={`spark-${i}`}
+            className="absolute h-2.5 w-2.5 rounded-full"
+            style={{ background: i % 3 ? color : '#ffffff', boxShadow: `0 0 12px ${color}` }}
+            initial={{ x: 0, y: 0, opacity: 0 }}
+            animate={{ x: [0, 0, Math.cos(a) * d], y: [0, 0, Math.sin(a) * d], opacity: [0, 1, 0] }}
+            transition={{ duration: dur + 0.35, times: [0, 0.76, 1], ease: 'easeOut' }}
+          />
+        );
+      })}
       {/* light burst behind the pack */}
       <motion.div
         className="absolute h-64 w-64 rounded-full"
@@ -63,8 +122,8 @@ export function PackTear({ tier, onDone }: { tier: Tier; onDone: () => void }) {
           <div className="h-3 bg-[repeating-linear-gradient(90deg,rgba(255,255,255,0.35)_0_6px,transparent_6px_12px)]" />
         </motion.div>
         <div className="text-xs font-semibold uppercase tracking-[0.3em] text-white/70">CoinPack</div>
-        <div className="text-5xl font-black">3–5</div>
-        <div className="text-xs uppercase tracking-widest text-white/70">tokens inside</div>
+        <div className="text-5xl font-black tabular-nums">{priceLabel ? priceLabel.replace(/\s*MON$/, '') : ''}</div>
+        <div className="text-sm font-bold uppercase tracking-widest text-white/80">MON</div>
       </motion.div>
     </div>
   );

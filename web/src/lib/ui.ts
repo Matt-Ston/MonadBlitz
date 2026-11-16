@@ -8,14 +8,25 @@ export type DisplayRarity = Rarity | 4 | 5;
 export const MYTHIC = 4;
 export const ULTRA = 5;
 
-export function displayRarity(pull: Pull, pack: { tier: Tier; pulls: Pull[] }): DisplayRarity {
+export function displayRarity(pull: Pull, pack: { tier: Tier; pulls: Pull[]; multiplierBps?: number }): DisplayRarity {
   // The boosted card is the last slot: 2–4 on IR-3 vaults (3–5 cards), 9 on the old 10-card vault.
   if (pull.rarity === 3 && pull.slot === pack.pulls.length - 1) {
     if (pack.tier === 'ULTRA_LEGENDARY') return ULTRA;
-    if (pack.tier === 'LEGENDARY') return MYTHIC;
+    // Legendary packs pay 2.2x–4.0x; only the top third (3.4x and up) carry a Mythic. The rest show a Legendary.
+    if (pack.tier === 'LEGENDARY' && (pack.multiplierBps ?? 0) >= 34000) return MYTHIC;
   }
   return pull.rarity;
 }
+
+/** An Uncommon pack's best card is shown as an Uncommon: a step above Common, below Rare. Display only. */
+export function isUncommon(pull: Pull, pack: { tier: Tier; pulls: Pull[] }): boolean {
+  return pack.tier === 'UNCOMMON' && pull.rarity === 0 && pull.slot === pack.pulls.length - 1;
+}
+export const UNCOMMON_LOOK = {
+  label: 'Uncommon',
+  frame: 'border-emerald-400 from-emerald-800/60 to-zinc-900 shadow-[0_0_16px_rgba(52,211,153,0.35)]',
+  text: 'text-emerald-300',
+};
 
 /** Reveal-grid columns for a pack's card count (literal class names so Tailwind keeps them). */
 export function cardGridClass(n: number): string {

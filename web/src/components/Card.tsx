@@ -6,6 +6,7 @@ import {
   MYTHIC, RARITY_FRAME, RARITY_GLOW, RARITY_LABEL, RARITY_TEXT, ULTRA,
   formatCoin, formatUsd, usdFor, type DisplayRarity,
 } from '@/lib/ui';
+import { UNCOMMON_LOOK } from '@/lib/ui';
 import { TokenBadge } from './TokenBadge';
 
 /** Charge-up shake: builds from a tremble (Legendary) to a violent rattle (Ultra Legendary). */
@@ -29,8 +30,10 @@ function chargeShake(r: DisplayRarity) {
 }
 
 export function Card({
-  pull, token, flipped, rarity, charging = false, big = false,
+  pull, token, flipped, rarity, charging = false, big = false, uncommon = false,
 }: {
+  /** Show this Common as an Uncommon (the best card of an Uncommon pack). */
+  uncommon?: boolean;
   pull: Pull;
   token?: TokenInfo;
   flipped: boolean;
@@ -81,28 +84,28 @@ export function Card({
 
         {/* front */}
         <div
-          className={`backface-hidden rotate-y-180 absolute inset-0 flex flex-col items-center justify-between overflow-hidden rounded-2xl border-2 bg-gradient-to-b p-2 sm:p-3 ${RARITY_FRAME[r]}`}
+          className={`backface-hidden rotate-y-180 absolute inset-0 flex flex-col items-center justify-between overflow-hidden rounded-2xl border-2 bg-gradient-to-b p-2 sm:p-3 ${uncommon ? UNCOMMON_LOOK.frame : RARITY_FRAME[r]}`}
         >
           {epic && <div className={`pointer-events-none absolute inset-[-50%] ${r === ULTRA ? 'rays-ultra' : 'rays-mythic'}`} />}
           {r >= 3 && (
             <div className="pointer-events-none absolute inset-y-0 left-0 w-1/3 animate-shimmer bg-gradient-to-r from-transparent via-white/40 to-transparent" />
           )}
           <span
-            className={`relative text-center font-semibold uppercase leading-none tracking-widest ${RARITY_TEXT[r]} ${
+            className={`relative text-center font-semibold uppercase leading-none tracking-widest ${uncommon ? UNCOMMON_LOOK.text : RARITY_TEXT[r]} ${
               epic ? 'text-[9px] font-black sm:text-[11px]' : 'text-[10px]'
             }`}
           >
-            {RARITY_LABEL[r]}
+            {uncommon ? UNCOMMON_LOOK.label : RARITY_LABEL[r]}
           </span>
           <div className="relative">
             <TokenBadge symbol={pull.symbol} color={token?.color ?? '#555'} size={big ? 92 : 52} />
           </div>
           <div className="relative w-full text-center leading-tight">
-            <div className={`break-all font-black tabular-nums ${big ? 'text-lg' : 'text-[11px] sm:text-xs'}`}>{coin}</div>
+            <div className={`break-all font-black tabular-nums ${big ? 'text-lg' : 'text-xs sm:text-sm'}`}>{coin}</div>
             {usd !== undefined && (
-              <div className={`font-semibold text-emerald-300/90 ${big ? 'text-sm' : 'text-[10px]'}`}>{formatUsd(usd)}</div>
+              <div className={`font-semibold text-emerald-300/90 ${big ? 'text-base' : 'text-xs'}`}>{formatUsd(usd)}</div>
             )}
-            <div className="mt-0.5 text-[10px] text-white/50 sm:text-[11px]">{formatMon(pull.valueWei)} MON</div>
+            <div className={`mt-0.5 font-black tabular-nums text-white ${big ? 'text-2xl' : 'text-sm sm:text-base'}`}>{formatMon(pull.valueWei)} MON</div>
           </div>
         </div>
       </motion.div>

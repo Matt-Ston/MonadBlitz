@@ -50,7 +50,7 @@ export default function CollectionPage() {
       ) : sorted.length === 0 ? (
         <div className="flex flex-col items-center gap-3 rounded-2xl border border-line bg-panel/60 p-10 text-center">
           <p className="text-white/60">No tokens yet.</p>
-          <Link href="/" className="rounded-full bg-accent px-5 py-2 font-semibold">
+          <Link href="/packs" className="rounded-full bg-accent px-5 py-2 font-semibold">
             Open your first pack
           </Link>
         </div>

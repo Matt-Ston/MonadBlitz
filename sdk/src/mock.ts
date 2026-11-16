@@ -99,26 +99,61 @@ const emit = () => {
 // ---------- mock draw (follows §3.3 shape with Math.random) ----------
 const rnd = (min: number, max: number) => min + Math.floor(Math.random() * (max - min + 1));
 const randHex = (): Hex => `0x${Array.from({ length: 64 }, () => Math.floor(Math.random() * 16).toString(16)).join('')}`;
-const RARITY_MUL = [4, 12, 60, 250];
+// Value-split weight per rarity: a Legendary card is worth about 800x a Common in the same pack.
+const RARITY_MUL = [1, 8, 80, 800];
+
+// ---------- mock-only settings (demo odds, pack price); real mode ignores them ----------
+export const MOCK_PACK_PRICES: bigint[] = [PACK_PRICE, 10n * PACK_PRICE, 50n * PACK_PRICE]; // 0.1, 1 and 5 MON
+let mockPackPrice = PACK_PRICE;
+let demoBoost = false;
+export const getMockPackPrice = () => mockPackPrice;
+export const getDemoBoost = () => demoBoost;
+export function setMockPackPrice(wei: bigint): void {
+  mockPackPrice = wei;
+  emit();
+}
+export function setDemoBoost(on: boolean): void {
+  demoBoost = on;
+  emit();
+}
+
+// Demo mode: Legendary / Mythic / Ultra packs come up roughly 20x as often as the real odds. Mock mode only.
+const DEMO_WEIGHTS = [700, 800, 1000, 2000, 4500, 1000];
+
+function pickTierIdx(): number {
+  const weights = demoBoost ? DEMO_WEIGHTS : ODDS.rows.map((r) => r.probabilityBps);
+  let roll = Math.random() * weights.reduce((x, y) => x + y, 0);
+  for (let i = 0; i < weights.length; i++) if ((roll -= weights[i]) < 0) return i;
+  return 0;
+}
+
+// The pack's best card always matches its tier, so a good pack never turns out to be all Commons:
+// Common / Uncommon packs hold Commons, a Rare pack has a Rare, Epic an Epic, Legendary and Ultra a Legendary.
+const BEST_RARITY: Rarity[] = [0, 0, 1, 2, 3, 3];
 
 export function makeMockResult(): PackResult {
-  // Demo mix (more wins than the real 45/30/16/6/2.5/0.5 so every tier shows up in a demo); ranges are IR-2's.
-  const roll = Math.random() * 100;
-  const tierIdx = roll < 30 ? 0 : roll < 58 ? 1 : roll < 78 ? 2 : roll < 90 ? 3 : roll < 97 ? 4 : 5;
+  const tierIdx = pickTierIdx();
   const tier: Tier = ODDS.rows[tierIdx].tier;
   const multiplierBps = rnd(ODDS.rows[tierIdx].minMultBps, ODDS.rows[tierIdx].maxMultBps);
-  const total = (PACK_PRICE * BigInt(multiplierBps)) / 10000n;
+  const price = mockPackPrice;
+  const total = (price * BigInt(multiplierBps)) / 10000n;
   const win = tier === 'LEGENDARY' || tier === 'ULTRA_LEGENDARY';
+  const best = BEST_RARITY[tierIdx];
 
-  const n = rnd(3, 5); // IR-3: 3–5 cards; the last slot carries the boost on big packs
+  const n = rnd(3, 5); // 3–5 cards; the last slot is the pack's best card
   const picks = Array.from({ length: n }, (_, i) => {
-    const x = rnd(0, 9999);
-    let rarity: Rarity = x < 7500 ? 0 : x < 9500 ? 1 : x < 9950 ? 2 : 3;
-    if (i === n - 1 && win) rarity = 3;
+    let rarity: Rarity = best;
+    if (i < n - 1) {
+      // The other cards stay below the best one.
+      const x = rnd(0, 9999);
+      const rolled = x < 7500 ? 0 : x < 9500 ? 1 : 2;
+      rarity = Math.min(rolled, Math.max(0, best - 1)) as Rarity;
+    }
     const pool = CATALOG.filter((t) => t.rarity === rarity);
     const token = pool[rnd(0, pool.length - 1)];
     let w = BigInt(rnd(50, 150) * RARITY_MUL[rarity]);
     if (i === n - 1 && win) w *= 4n;
+    if (i === n - 1 && tier === 'UNCOMMON') w *= 3n; // the pack's Uncommon card
     return { token, rarity, w };
   });
   const sumW = picks.reduce((s, p) => s + p.w, 0n);
@@ -141,7 +176,7 @@ export function makeMockResult(): PackResult {
     buyer: MOCK_ADDRESS,
     txHash: randHex(),
     openedAt: now(),
-    pricePaidWei: PACK_PRICE.toString(),
+    pricePaidWei: price.toString(),
     tier,
     multiplierBps,
     totalValueWei: total.toString(),

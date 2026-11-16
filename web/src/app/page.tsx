@@ -1,88 +1,92 @@
 'use client';
-import { useState } from 'react';
-import type { PackResult } from '@/lib/sdk';
-import { formatMon, useCatalog, useConnection, useOpenPack, usePackPrice } from '@/lib/sdk';
-import { FAUCET_URL, friendlyError } from '@/lib/ui';
-import { Pack } from '@/components/Pack';
-import { Reveal } from '@/components/Reveal';
+import Link from 'next/link';
+import { motion } from 'framer-motion';
+import { Duck } from '@/components/Duck';
 import { FeedTicker } from '@/components/FeedTicker';
-import { Connect } from '@/components/Connect';
 
-export default function Home() {
-  const { isConnected, isWrongChain, switchChain } = useConnection();
-  const { priceWei } = usePackPrice();
-  const { data: catalog } = useCatalog();
-  const { open, status, error } = useOpenPack();
-  const [result, setResult] = useState<PackResult | null>(null);
-
-  const busy = status === 'signing' || status === 'mining';
-  const priceLabel = priceWei !== undefined ? `${formatMon(priceWei, 2)} MON` : '… MON';
-  const err = status === 'error' ? friendlyError(error) : null;
-
-  async function handleOpen() {
-    setResult(null);
-    try {
-      setResult(await open());
-    } catch {
-      /* surfaced through `error` */
-    }
-  }
-
-  if (result) {
-    return (
-      <div className="flex flex-col gap-6">
-        <Reveal key={result.requestId} result={result} catalog={catalog} onAgain={handleOpen} />
+const GAMES = [
+  {
+    href: '/packs', name: 'Packs', tag: 'Rip a pack, flip the cards', cta: 'Open packs',
+    ring: 'from-violet-500 via-fuchsia-500 to-violet-500', glow: 'rgba(131,110,249,0.7)',
+    art: (
+      <div className="pack-face flex h-28 w-20 flex-col items-center justify-center rounded-xl border border-white/30">
+        <span className="text-3xl font-black">0.1</span>
+        <span className="text-[10px] font-bold uppercase tracking-widest text-white/80">MON</span>
       </div>
-    );
-  }
+    ),
+  },
+  {
+    href: '/slots', name: 'Slots', tag: 'Pull the lever, line them up', cta: 'Spin the slots',
+    ring: 'from-amber-300 via-rose-500 to-amber-300', glow: 'rgba(251,191,36,0.7)',
+    art: (
+      <div className="flex gap-1.5">
+        {['👑', '💎', '👑'].map((s, i) => (
+          <motion.span
+            key={i}
+            className="flex h-24 w-14 items-center justify-center rounded-lg border border-white/20 bg-zinc-900 text-4xl"
+            animate={{ y: [0, -6, 0] }}
+            transition={{ duration: 1.2, repeat: Infinity, delay: i * 0.2 }}
+          >
+            {s}
+          </motion.span>
+        ))}
+      </div>
+    ),
+  },
+  {
+    href: '/wheel', name: 'Wheel', tag: 'Spin it, tick tick tick', cta: 'Spin the wheel',
+    ring: 'from-sky-400 via-emerald-400 to-sky-400', glow: 'rgba(56,189,248,0.7)',
+    art: (
+      <motion.div
+        className="h-28 w-28 rounded-full border-4 border-white/40"
+        style={{ background: 'conic-gradient(#71717a 0 45%, #0ea5e9 45% 75%, #10b981 75% 91%, #d946ef 91% 97%, #fbbf24 97% 99.5%, #f472b6 99.5% 100%)' }}
+        animate={{ rotate: 360 }}
+        transition={{ duration: 6, repeat: Infinity, ease: 'linear' }}
+      />
+    ),
+  },
+];
 
+/** Home: pick one of the three games. They all use the same on-chain draw and odds. */
+export default function Home() {
   return (
     <div className="flex flex-col items-center gap-10 pt-4">
       <section className="flex flex-col items-center gap-3 text-center">
-        <h1 className="text-4xl font-black tracking-tight sm:text-5xl">
-          Rip a pack. <span className="text-accent">Pull 3–5 tokens.</span>
+        <motion.div animate={{ y: [0, -12, 0], rotate: [0, -4, 4, 0] }} transition={{ duration: 2.4, repeat: Infinity, ease: 'easeInOut' }}>
+          <Duck size={120} />
+        </motion.div>
+        <h1 className="text-5xl font-black tracking-tight sm:text-6xl">
+          Pick your <span className="text-accent">game.</span>
         </h1>
-        <p className="max-w-xl text-white/60">
-          Each pack holds 3 to 5 tokens. About 1 in 3 packs beats its price, and 1 in 200 is a 5–10x Ultra
-          Legendary. The draw happens on-chain on Monad, and the odds are public.
+        <p className="max-w-xl text-lg text-white/70">
+          Three ways to pull tokens on Monad. Same on-chain draw, same public odds, different thrill.
         </p>
       </section>
 
-      <Pack busy={busy} priceLabel={priceLabel} />
-
-      <div className="flex flex-col items-center gap-3">
-        {!isConnected ? (
-          <div className="flex flex-col items-center gap-2">
-            <Connect />
-            <p className="text-xs text-white/40">Connect a wallet on Monad testnet to open a pack.</p>
-          </div>
-        ) : isWrongChain ? (
-          <button
-            onClick={() => switchChain()}
-            className="rounded-full bg-amber-400 px-8 py-3 text-lg font-bold text-black transition hover:brightness-110"
+      <div className="grid w-full gap-6 sm:grid-cols-3">
+        {GAMES.map((g, i) => (
+          <motion.div
+            key={g.href}
+            initial={{ opacity: 0, y: 40 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: i * 0.12, type: 'spring', stiffness: 220, damping: 18 }}
+            whileHover={{ y: -10, scale: 1.04 }}
+            whileTap={{ scale: 0.97 }}
           >
-            Switch to Monad Testnet
-          </button>
-        ) : (
-          <button
-            onClick={handleOpen}
-            disabled={busy || priceWei === undefined}
-            className="min-w-56 rounded-full bg-accent px-8 py-3 text-lg font-bold text-white shadow-[0_10px_30px_rgba(131,110,249,0.5)] transition hover:brightness-110 disabled:cursor-wait disabled:opacity-70"
-          >
-            {status === 'signing' ? 'Confirm in wallet…' : status === 'mining' ? 'Opening pack…' : `Open Pack · ${priceLabel}`}
-          </button>
-        )}
-
-        {err && (
-          <div className="max-w-md rounded-xl border border-rose-500/40 bg-rose-500/10 px-4 py-2 text-center text-sm text-rose-200">
-            {err.text}{' '}
-            {err.needsMon && (
-              <a href={FAUCET_URL} target="_blank" rel="noreferrer" className="font-semibold underline">
-                Get at least 0.16 MON from the faucet
-              </a>
-            )}
-          </div>
-        )}
+            <Link
+              href={g.href}
+              className={`block rounded-[2rem] bg-gradient-to-br p-[3px] ${g.ring}`}
+              style={{ boxShadow: `0 0 60px -6px ${g.glow}` }}
+            >
+              <div className="flex h-full flex-col items-center gap-4 rounded-[1.85rem] bg-ink/90 px-5 py-8 text-center">
+                <div className="flex h-32 items-center justify-center">{g.art}</div>
+                <h2 className="text-4xl font-black">{g.name}</h2>
+                <p className="text-white/70">{g.tag}</p>
+                <span className="rounded-full bg-white px-6 py-2.5 text-base font-black text-black">{g.cta}</span>
+              </div>
+            </Link>
+          </motion.div>
+        ))}
       </div>
 
       <FeedTicker />

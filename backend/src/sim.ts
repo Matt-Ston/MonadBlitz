@@ -5,7 +5,7 @@ import { TIERS, type Tier } from './types.js';
 const N = Number(process.argv[2] || 200_000);
 const RARITY_NAMES = ['Common', 'Rare', 'Epic', 'Legendary'];
 // Value-split weight per rarity (§3.3 step 5). Try alternatives: RARITY_MUL=10,15,25,40 pnpm sim
-const RARITY_MUL = (process.env.RARITY_MUL || '4,12,60,250').split(',').map(Number);
+const RARITY_MUL = (process.env.RARITY_MUL || '1,8,80,800').split(',').map(Number);
 // Rarity roll cutoffs on r % 10000 (§3.3 step 4): Common below the 1st, Rare below the 2nd, Epic below the 3rd.
 // Try alternatives: RARITY_CUTS=6000,8800,9800 pnpm sim
 const [C_CUT, R_CUT, E_CUT] = (process.env.RARITY_CUTS || '7500,9500,9950').split(',').map(Number);

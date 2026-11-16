@@ -7,7 +7,10 @@ import { multicall, readContract, waitForTransactionReceipt } from 'wagmi/action
 import { erc20Abi, packVaultAbi, priceOracleAbi } from './abi';
 import { CHAIN_ID } from './chain';
 import { PACK_VAULT, PRICE_ORACLE, TOKENS, tokenByAddress } from './contracts';
-import { CATALOG, MOCK, MOCK_ADDRESS, ODDS, PACK_PRICE, balances, feed, getVersion, makeMockResult, recordMockPull, subscribe } from './mock';
+import {
+  CATALOG, MOCK, MOCK_ADDRESS, MOCK_PACK_PRICES, ODDS, balances, feed, getDemoBoost, getMockPackPrice, getVersion,
+  makeMockResult, recordMockPull, setDemoBoost, setMockPackPrice, subscribe,
+} from './mock';
 import { TIERS } from './types';
 import type { FeedItem, Hex, Holding, Odds, PackResult, Rarity, TokenInfo } from './types';
 
@@ -17,6 +20,7 @@ import type { FeedItem, Hex, Holding, Odds, PackResult, Rarity, TokenInfo } from
 type OpenStatus = 'idle' | 'signing' | 'mining' | 'done' | 'error';
 type ConnectionState = { address?: Hex; isConnected: boolean; isWrongChain: boolean; switchChain(): Promise<void> };
 type OpenPackState = { open(): Promise<PackResult>; status: OpenStatus; error?: Error; last?: PackResult };
+type OpenPacksState = { openMany(count: number): Promise<PackResult[]>; status: OpenStatus; error?: Error };
 
 const E18 = 10n ** 18n;
 
@@ -29,7 +33,8 @@ function mockUseConnection(): ConnectionState {
 }
 
 function mockUsePackPrice(): { priceWei?: bigint } {
-  return { priceWei: PACK_PRICE };
+  useMockStore();
+  return { priceWei: getMockPackPrice() };
 }
 
 function mockUseCatalog(): { data?: TokenInfo[] } {
@@ -59,6 +64,24 @@ function mockUseOpenPack(): OpenPackState {
   }, []);
 
   return { open, status, error, last };
+}
+
+function mockUseOpenPacks(): OpenPacksState {
+  const [status, setStatus] = useState<OpenStatus>('idle');
+  const openMany = useCallback(async (count: number) => {
+    setStatus('signing');
+    await new Promise((r) => setTimeout(r, 300));
+    setStatus('mining');
+    await new Promise((r) => setTimeout(r, 1200));
+    const results = Array.from({ length: count }, () => {
+      const res = makeMockResult();
+      recordMockPull(res);
+      return res;
+    });
+    setStatus('done');
+    return results;
+  }, []);
+  return { openMany, status };
 }
 
 function mockUseHoldings(address?: Hex): { data?: Holding[]; refetch(): void } {
@@ -310,6 +333,20 @@ function realUseRecentFeed(): { data?: FeedItem[] } {
   return { data };
 }
 
+/** Real mode: the deployed vault opens one pack per transaction, so several packs are opened back to back. */
+function realUseOpenPacks(): OpenPacksState {
+  const single = realUseOpenPack();
+  const openMany = useCallback(
+    async (count: number) => {
+      const out: PackResult[] = [];
+      for (let i = 0; i < count; i++) out.push(await single.open());
+      return out;
+    },
+    [single.open],
+  );
+  return { openMany, status: single.status, error: single.error };
+}
+
 // ============================================================ §3.9 exports
 
 export const useConnection: () => ConnectionState = MOCK ? mockUseConnection : realUseConnection;
@@ -319,5 +356,14 @@ export const useOdds: () => { data: Odds } = MOCK ? mockUseOdds : realUseOdds;
 export const useOpenPack: () => OpenPackState = MOCK ? mockUseOpenPack : realUseOpenPack;
 export const useHoldings: (address?: Hex) => { data?: Holding[]; refetch(): void } = MOCK ? mockUseHoldings : realUseHoldings;
 export const useRecentFeed: () => { data?: FeedItem[] } = MOCK ? mockUseRecentFeed : realUseRecentFeed;
+
+/** Open several packs in one go. Results are in the order they were opened. */
+export const useOpenPacks: () => OpenPacksState = MOCK ? mockUseOpenPacks : realUseOpenPacks;
+
+/** Mock-mode-only knobs for demos: boosted odds and the pack price. They do nothing in real mode. */
+export function useDemoSettings(): { demo: boolean; setDemo(on: boolean): void; prices: bigint[]; setPrice(wei: bigint): void } {
+  useMockStore();
+  return { demo: getDemoBoost(), setDemo: setDemoBoost, prices: MOCK_PACK_PRICES, setPrice: setMockPackPrice };
+}
 
 export { MOCK };

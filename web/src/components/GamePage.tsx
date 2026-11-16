@@ -3,9 +3,12 @@ import { useState } from 'react';
 import { motion } from 'framer-motion';
 import type { PackResult, TokenInfo } from '@/lib/sdk';
 import { formatMon, pctChange, sortPullsForReveal, useCatalog, useConnection, useOpenPack, usePackPrice } from '@/lib/sdk';
-import { EXPLORER_URL, FAUCET_URL, TIER_INFO, cardGridClass, displayRarity, findToken, friendlyError } from '@/lib/ui';
+import { EXPLORER_URL, FAUCET_URL, TIER_INFO, cardGridClass, displayRarity, isUncommon, findToken, friendlyError } from '@/lib/ui';
 import { Card } from './Card';
 import { Connect } from './Connect';
+import { emitFx } from '@/lib/fx';
+import { ReturnStats } from './ReturnStats';
+import { BackHome } from './BackHome';
 
 /** The 3–5 tokens behind a spin: same pulls as a pack, shown all at once after the machine lands. */
 function GameResult({ result, catalog }: { result: PackResult; catalog?: TokenInfo[] }) {
@@ -14,16 +17,10 @@ function GameResult({ result, catalog }: { result: PackResult; catalog?: TokenIn
   return (
     <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="flex w-full flex-col items-center gap-4">
       <span className={`rounded-full px-6 py-2 text-xl font-black uppercase tracking-wider ${tier.className}`}>{tier.label}</span>
-      <p className="text-center text-base sm:text-lg">
-        Paid <b>{formatMon(result.pricePaidWei)} MON</b>, won <b>{formatMon(result.totalValueWei)} MON</b>{' '}
-        <span className={`font-bold ${pct >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
-          {pct >= 0 ? '+' : ''}
-          {pct.toFixed(1)}%
-        </span>
-      </p>
+      <ReturnStats paidWei={result.pricePaidWei} pulledWei={result.totalValueWei} label="Won" />
       <div className={`mx-auto grid w-full gap-2 sm:gap-3 ${cardGridClass(result.pulls.length)}`}>
         {sortPullsForReveal(result.pulls).map((p) => (
-          <Card key={p.slot} pull={p} token={findToken(catalog, p.token)} flipped rarity={displayRarity(p, result)} />
+          <Card key={p.slot} pull={p} token={findToken(catalog, p.token)} flipped rarity={displayRarity(p, result)} uncommon={isUncommon(p, result)} />
         ))}
       </div>
       <p className="text-xs text-white/40">
@@ -41,8 +38,10 @@ function GameResult({ result, catalog }: { result: PackResult; catalog?: TokenIn
  * on-chain draw as the pack on "/". Only the animation in the middle differs.
  */
 export function GamePage({
-  title, accent, blurb, verb, renderMachine,
+  title, accent, blurb, verb, renderMachine, round = false,
 }: {
+  /** Round neon frame (the wheel) instead of the boxy one (the slot machine). */
+  round?: boolean;
   title: string;
   accent: string;
   blurb: string;
@@ -64,6 +63,7 @@ export function GamePage({
   async function handleSpin() {
     setResult(null);
     setLanded(false);
+    emitFx({ type: 'busy' });
     try {
       setResult(await open());
     } catch {
@@ -72,7 +72,8 @@ export function GamePage({
   }
 
   return (
-    <div className="flex flex-col items-center gap-8 pt-4">
+    <div className="flex flex-col items-center gap-8 pt-2">
+      <BackHome />
       <section className="flex flex-col items-center gap-3 text-center">
         <h1 className="text-4xl font-black tracking-tight sm:text-5xl">
           {title} <span className="text-accent">{accent}</span>
@@ -80,7 +81,23 @@ export function GamePage({
         <p className="max-w-xl text-white/60">{blurb}</p>
       </section>
 
-      {renderMachine({ busy, result: result ?? undefined, onLanded: () => setLanded(true) })}
+      <div
+        className={`neon-frame my-4 sm:scale-110 ${round ? 'neon-round' : ''}`}
+        data-spinning={spinning ? 'true' : 'false'}
+        data-landed={result && landed ? 'true' : 'false'}
+      >
+      {renderMachine({
+        busy,
+        result: result ?? undefined,
+        onLanded: () => {
+          setLanded(true);
+          if (!result) return;
+          const best = Math.max(...result.pulls.map((p) => displayRarity(p, result)));
+          emitFx({ type: 'pull', rarity: best, uncommon: best < 1 && result.tier === 'UNCOMMON' });
+          if (best < 2) emitFx({ type: 'pack', won: BigInt(result.totalValueWei) >= BigInt(result.pricePaidWei), bad: result.multiplierBps < 8000 });
+        },
+      })}
+      </div>
 
       <div className="flex flex-col items-center gap-3">
         {!isConnected ? (

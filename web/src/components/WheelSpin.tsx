@@ -4,6 +4,7 @@ import { motion, useAnimationControls, useReducedMotion } from 'framer-motion';
 import type { Odds, PackResult } from '@/lib/sdk';
 import { buildWheelSegments, celebrateTier } from '@/lib/games';
 import { TIER_INFO } from '@/lib/ui';
+import { Duck } from './Duck';
 
 const LAND_MS = 2200;
 const EXTRA_SPINS = 5;
@@ -62,11 +63,11 @@ export function WheelSpin({
       <motion.div
         animate={pointer}
         style={{ originY: 0 }}
-        className="z-10 -mb-3 h-0 w-0 border-x-[14px] border-t-[26px] border-x-transparent border-t-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.6)]"
+        className="z-10 -mb-4 h-0 w-0 border-x-[20px] border-t-[38px] border-x-transparent border-t-yellow-300 drop-shadow-[0_0_12px_rgba(253,224,71,0.95)]"
       />
       <motion.div
         animate={wheel}
-        className="relative h-72 w-72 rounded-full border-[6px] border-white/20 shadow-[0_20px_60px_rgba(131,110,249,0.45)] sm:h-80 sm:w-80"
+        className="relative h-80 w-80 rounded-full border-[8px] border-white/70 shadow-[inset_0_0_40px_rgba(0,0,0,0.55),0_0_50px_rgba(255,255,255,0.35)] sm:h-96 sm:w-96"
         style={{ background: gradient }}
       >
         {segments.map((s) => {
@@ -90,7 +91,9 @@ export function WheelSpin({
             </div>
           );
         })}
-        <div className="absolute left-1/2 top-1/2 h-12 w-12 -translate-x-1/2 -translate-y-1/2 rounded-full border-4 border-white/30 bg-ink" />
+        <div className="absolute left-1/2 top-1/2 flex h-20 w-20 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border-4 border-yellow-300 bg-ink shadow-[0_0_24px_rgba(253,224,71,0.8)]">
+          <Duck size={56} />
+        </div>
       </motion.div>
       {landedTier && <span className="sr-only">Landed on {landedTier}</span>}
     </div>

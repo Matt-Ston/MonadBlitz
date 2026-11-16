@@ -5,13 +5,13 @@ import type { PackResult } from '@/lib/sdk';
 import { REEL_FILLER, celebrateTier, reelSymbolsForTier } from '@/lib/games';
 
 const STOP_MS = [900, 1300, 1800]; // reels stop left to right
-const CELL = 88; // px per symbol row
+const CELL = 112; // px per symbol row
 
 /** One reel: loops filler symbols while spinning, then shows the final symbol. */
 function Reel({ spinning, symbol, offset, landing }: { spinning: boolean; symbol: string; offset: number; landing: boolean }) {
   const strip = [...REEL_FILLER.slice(offset), ...REEL_FILLER.slice(0, offset)];
   return (
-    <div className="relative h-[88px] w-20 overflow-hidden rounded-xl border border-white/15 bg-gradient-to-b from-zinc-900 via-zinc-800 to-zinc-900 sm:w-24">
+    <div className="relative h-[112px] w-24 overflow-hidden rounded-xl border-2 border-amber-300/60 bg-gradient-to-b from-zinc-900 via-zinc-700 to-zinc-900 shadow-[inset_0_0_18px_rgba(0,0,0,0.9)] sm:w-28">
       {spinning ? (
         <motion.div
           className="flex flex-col"
@@ -19,7 +19,7 @@ function Reel({ spinning, symbol, offset, landing }: { spinning: boolean; symbol
           transition={{ duration: 0.5, repeat: Infinity, ease: 'linear' }}
         >
           {[...strip, ...strip].map((s, i) => (
-            <div key={i} className="flex h-[88px] items-center justify-center text-5xl blur-[1px]">{s}</div>
+            <div key={i} className="flex h-[112px] items-center justify-center text-6xl blur-[1px]">{s}</div>
           ))}
         </motion.div>
       ) : (
@@ -28,7 +28,7 @@ function Reel({ spinning, symbol, offset, landing }: { spinning: boolean; symbol
           initial={landing ? { y: -CELL * 0.6 } : false}
           animate={{ y: 0 }}
           transition={{ type: 'spring', stiffness: 400, damping: 14 }}
-          className="flex h-[88px] items-center justify-center text-5xl"
+          className="flex h-[112px] items-center justify-center text-6xl drop-shadow-[0_0_14px_rgba(253,224,71,0.9)]"
         >
           {symbol}
         </motion.div>
@@ -72,13 +72,13 @@ export function SlotMachine({
         jackpot ? 'border-amber-300' : 'border-accent/70'
       } bg-gradient-to-b from-indigo-950 via-panel to-ink`}
     >
-      <div className="mb-3 text-center text-xs font-bold uppercase tracking-[0.35em] text-white/60">CoinPack Slots</div>
+      <div className="ultra-text mb-3 text-center text-base font-black uppercase tracking-[0.35em]">CoinPack Slots</div>
       <div className="flex gap-2 sm:gap-3">
         {symbols.map((s, i) => (
           <Reel key={i} spinning={busy || (!!result && stopped <= i)} symbol={s} offset={i * 3} landing={!!result} />
         ))}
       </div>
-      <div className="pointer-events-none absolute inset-x-5 top-1/2 mt-3 h-0.5 bg-rose-400/50" />
+      <div className="pointer-events-none absolute inset-x-3 top-1/2 mt-3 h-1 rounded-full bg-rose-400 shadow-[0_0_14px_3px_rgba(251,113,133,0.9)]" />
     </motion.div>
   );
 }

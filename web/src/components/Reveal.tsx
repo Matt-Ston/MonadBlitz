@@ -5,11 +5,13 @@ import type { PackResult, TokenInfo } from '@/lib/sdk';
 import { formatMon, pctChange, sortPullsForReveal } from '@/lib/sdk';
 import {
   EXPLORER_URL, MYTHIC, RARITY_GLOW, RARITY_LABEL, RARITY_TEXT, TIER_INFO, ULTRA,
-  cardGridClass, displayRarity, findToken, formatCoin, formatUsd, usdForMon, type DisplayRarity,
+  cardGridClass, displayRarity, isUncommon, findToken, formatCoin, formatUsd, usdForMon, type DisplayRarity,
 } from '@/lib/ui';
 import { Card } from './Card';
 import { PackTear } from './PackTear';
 import { RarityFX } from './RarityFX';
+import { emitFx, rectOf } from '@/lib/fx';
+import { ReturnStats } from './ReturnStats';
 
 // Manual spotlight per card: face-down → (tap) → charge if rare → face-up → (tap/swipe) → fly into the grid.
 const CHARGE_MS: Record<DisplayRarity, number> = { 0: 0, 1: 0, 2: 350, 3: 1100, 4: 1700, 5: 2600 };
@@ -51,7 +53,9 @@ async function burst(el: HTMLElement | null, r: DisplayRarity) {
   }
 }
 
-export function Reveal({ result, catalog, onAgain }: { result: PackResult; catalog?: TokenInfo[]; onAgain: () => void }) {
+export function Reveal({
+  result, catalog, onAgain, againLabel = 'Open another',
+}: { result: PackResult; catalog?: TokenInfo[]; onAgain: () => void; againLabel?: string }) {
   const reduced = useReducedMotion();
   const ordered = useMemo(() => sortPullsForReveal(result.pulls), [result]);
   const rarities = useMemo(() => ordered.map((p) => displayRarity(p, result)), [ordered, result]);
@@ -80,6 +84,7 @@ export function Reveal({ result, catalog, onAgain }: { result: PackResult; catal
   useEffect(() => {
     if (!flipped || reduced) return;
     burst(spotRef.current, r);
+    emitFx({ type: 'pull', rarity: r, rect: rectOf(spotRef.current), uncommon: isUncommon(ordered[cur], result) });
     if (r === 3) setFlash({ id: cur, color: '#fbbf24' });
     if (r >= MYTHIC) {
       setFlash({ id: cur, color: RARITY_GLOW[r][0] });
@@ -89,6 +94,7 @@ export function Reveal({ result, catalog, onAgain }: { result: PackResult; catal
 
   useEffect(() => {
     if (!done) return;
+    emitFx({ type: 'pack', won: BigInt(result.totalValueWei) >= BigInt(result.pricePaidWei), bad: result.multiplierBps < 8000 });
     if (!skipped) celebrate(result.tier);
     if (result.tier === 'ULTRA_LEGENDARY' && !reduced && !skipped) {
       shake.start({ x: [0, -12, 12, -10, 10, -6, 6, 0], transition: { duration: 0.7 } });
@@ -139,7 +145,7 @@ export function Reveal({ result, catalog, onAgain }: { result: PackResult; catal
     return (
       <div className="flex flex-col items-center gap-2">
         <div onClick={revealAll} className="cursor-pointer" title="Tap to reveal all">
-          <PackTear tier={result.tier} onDone={() => setTorn(true)} />
+          <PackTear tier={result.tier} onDone={() => setTorn(true)} priceLabel={`${formatMon(result.pricePaidWei, 2)} MON`} />
         </div>
       </div>
     );
@@ -191,6 +197,7 @@ export function Reveal({ result, catalog, onAgain }: { result: PackResult; catal
                   token={findToken(catalog, spot.token)}
                   flipped={flipped}
                   rarity={r}
+                  uncommon={isUncommon(spot, result)}
                   charging={charging}
                   big
                 />
@@ -230,7 +237,7 @@ export function Reveal({ result, catalog, onAgain }: { result: PackResult; catal
           {ordered.map((p, i) =>
             i < cur ? (
               <motion.div key={`${result.requestId}-${p.slot}`} layoutId={`card-${p.slot}`} transition={{ type: 'spring', stiffness: 300, damping: 28 }}>
-                <Card pull={p} token={findToken(catalog, p.token)} flipped rarity={rarities[i]} />
+                <Card pull={p} token={findToken(catalog, p.token)} flipped rarity={rarities[i]} uncommon={isUncommon(p, result)} />
               </motion.div>
             ) : (
               <div key={`slot-${i}`} className="aspect-[3/4] rounded-2xl border-2 border-dashed border-white/10" />
@@ -257,16 +264,12 @@ export function Reveal({ result, catalog, onAgain }: { result: PackResult; catal
               <span className="text-white/70"> · {formatCoin(bestPull.symbol, bestPull.amount)}</span>
             </motion.p>
           )}
-          <p className="text-base sm:text-lg">
-            You paid <b>{formatMon(result.pricePaidWei)} MON</b>
-            {paidUsd !== undefined && <span className="text-white/60"> ({formatUsd(paidUsd)})</span>}, pulled{' '}
-            <b>{formatMon(result.totalValueWei)} MON</b>
-            {pulledUsd !== undefined && <span className="text-white/60"> ({formatUsd(pulledUsd)})</span>}{' '}
-            <span className={`font-bold ${pct >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
-              {pct >= 0 ? '+' : ''}
-              {pct.toFixed(1)}%
-            </span>
-          </p>
+          <ReturnStats paidWei={result.pricePaidWei} pulledWei={result.totalValueWei} />
+          {paidUsd !== undefined && pulledUsd !== undefined && (
+            <p className="text-sm text-white/60">
+              {formatUsd(paidUsd)} in, {formatUsd(pulledUsd)} out
+            </p>
+          )}
           <p className="text-xs text-white/40">
             Pack #{result.requestId} · {(result.multiplierBps / 10000).toFixed(2)}x ·{' '}
             <a className="underline hover:text-white" href={`${EXPLORER_URL}/tx/${result.txHash}`} target="_blank" rel="noreferrer">
@@ -275,32 +278,32 @@ export function Reveal({ result, catalog, onAgain }: { result: PackResult; catal
           </p>
           <button
             onClick={onAgain}
-            className="rounded-full bg-accent px-6 py-2.5 font-semibold text-white transition hover:brightness-110"
+            className="rounded-full bg-accent px-8 py-3 text-lg font-bold text-white transition hover:brightness-110"
           >
-            Open another
+            {againLabel}
           </button>
         </motion.div>
       )}
       {/* running total, pinned to the bottom of the screen */}
       <div className="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-ink/90 px-4 pb-[calc(0.75rem+env(safe-area-inset-bottom))] pt-3 backdrop-blur">
-        <div className="mx-auto flex max-w-5xl items-center justify-between gap-3 text-xs sm:text-sm">
+        <div className="mx-auto flex max-w-5xl items-center justify-between gap-3 text-sm sm:text-base">
           <div className="min-w-0">
-            <div className="text-[10px] uppercase tracking-wider text-white/50 sm:text-xs">
+            <div className="text-xs font-bold uppercase tracking-wider text-white/60 sm:text-sm">
               {done ? 'Pulled' : <>Pulled so far<span className="hidden sm:inline"> · card</span> {Math.min(revealedCount, ordered.length)}/{ordered.length}</>}
             </div>
-            <motion.div key={revealedWei.toString()} initial={reduced ? false : { scale: 1.15 }} animate={{ scale: 1 }} className="origin-left whitespace-nowrap font-black sm:text-base">
+            <motion.div key={revealedWei.toString()} initial={reduced ? false : { scale: 1.15 }} animate={{ scale: 1 }} className="origin-left whitespace-nowrap text-2xl font-black tabular-nums sm:text-4xl">
               {formatMon(revealedWei)} MON
-              {revealedUsd !== undefined && <span className="block text-[10px] font-semibold text-white/60 sm:ml-1 sm:inline sm:text-sm">({formatUsd(revealedUsd)})</span>}
+              {revealedUsd !== undefined && <span className="block text-xs font-semibold text-white/70 sm:ml-2 sm:inline sm:text-lg">({formatUsd(revealedUsd)})</span>}
             </motion.div>
           </div>
-          <div className={`shrink-0 text-lg font-black tabular-nums sm:text-2xl ${revealedCount === 0 ? 'text-white/40' : runPct >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+          <div className={`shrink-0 text-4xl font-black tabular-nums sm:text-6xl ${revealedCount === 0 ? 'text-white/40' : runPct >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
             {revealedCount === 0 ? '–' : `${runPct >= 0 ? '+' : ''}${runPct.toFixed(1)}%`}
           </div>
           <div className="min-w-0 text-right">
-            <div className="text-[10px] uppercase tracking-wider text-white/50 sm:text-xs">Paid</div>
-            <div className="whitespace-nowrap font-black sm:text-base">
+            <div className="text-xs font-bold uppercase tracking-wider text-white/60 sm:text-sm">Paid</div>
+            <div className="whitespace-nowrap text-2xl font-black tabular-nums sm:text-4xl">
               {formatMon(result.pricePaidWei, 2)} MON
-              {paidUsd !== undefined && <span className="block text-[10px] font-semibold text-white/60 sm:ml-1 sm:inline sm:text-sm">({formatUsd(paidUsd)})</span>}
+              {paidUsd !== undefined && <span className="block text-xs font-semibold text-white/70 sm:ml-2 sm:inline sm:text-lg">({formatUsd(paidUsd)})</span>}
             </div>
           </div>
         </div>
