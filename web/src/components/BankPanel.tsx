@@ -1,7 +1,7 @@
 'use client';
 import { useState } from 'react';
-import type { BankState, TokenInfo } from '@/lib/sdk';
-import { formatMon } from '@/lib/sdk';
+import { formatMon, useBank, useCatalog } from '@/lib/sdk';
+import { setPayFromBank, usePayFromBank } from '@/lib/bankPref';
 import { formatUsd, friendlyError, parseMon, usdForMon } from '@/lib/ui';
 
 const PRESETS = ['0.5', '1', '5', '10'];
@@ -9,24 +9,22 @@ const PRESETS = ['0.5', '1', '5', '10'];
 /**
  * The pack bank (IR-4): deposit MON once, then every "Open" is paid from the balance. Opening 5 packs is one
  * transaction instead of five, with no MON attached, so there's one signature and one gas charge per batch.
+ * Lives on Home (#bank); the "Pay from bank" switch applies to Packs, Slots and Wheel.
  */
-export function BankPanel({
-  bank, catalog, payFromBank, setPayFromBank,
-}: {
-  bank: BankState;
-  catalog?: TokenInfo[];
-  payFromBank: boolean;
-  setPayFromBank(on: boolean): void;
-}) {
+export function BankPanel() {
+  const bank = useBank();
+  const { data: catalog } = useCatalog();
+  const payFromBank = usePayFromBank();
   const [amount, setAmount] = useState('1');
   const wei = parseMon(amount);
   const balance = bank.balanceWei ?? 0n;
   const usd = usdForMon(balance, catalog);
   const busy = bank.status === 'signing' || bank.status === 'mining';
   const err = bank.status === 'error' ? friendlyError(bank.error) : null;
+  if (!bank.supported) return null;
 
   return (
-    <section className="w-full rounded-3xl border border-emerald-300/30 bg-emerald-400/5 p-4 shadow-[0_0_40px_-12px_rgba(52,211,153,0.6)] sm:p-5">
+    <section id="bank" className="w-full scroll-mt-24 rounded-3xl border border-emerald-300/30 bg-emerald-400/5 p-4 shadow-[0_0_40px_-12px_rgba(52,211,153,0.6)] sm:p-5">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div className="min-w-0">
           <div className="text-xs font-semibold uppercase tracking-widest text-emerald-300">Your pack bank</div>
@@ -35,8 +33,8 @@ export function BankPanel({
             {usd !== undefined && <span className="ml-2 text-base font-semibold text-white/50">{formatUsd(usd)}</span>}
           </div>
           <p className="mt-1 max-w-md text-xs text-white/60">
-            Deposit once, then open packs straight from your bank: no MON sent per pack, and opening 5 is one
-            transaction instead of five.
+            Deposit once, then play straight from your bank in every game: no MON sent per pack, and opening 5
+            packs is one transaction instead of five.
           </p>
         </div>
 

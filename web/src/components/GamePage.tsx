@@ -11,6 +11,7 @@ import { ReturnStats } from './ReturnStats';
 import { BackHome } from './BackHome';
 import { ShareButton } from './ShareButton';
 import { shareWorthy } from '@/lib/share';
+import { useBankPay } from '@/lib/bankPref';
 
 /** The 3–5 tokens behind a spin: same pulls as a pack, shown all at once after the machine lands. */
 function GameResult({ result, catalog }: { result: PackResult; catalog?: TokenInfo[] }) {
@@ -54,7 +55,11 @@ export function GamePage({
   const { isConnected, isWrongChain, switchChain } = useConnection();
   const { priceWei } = usePackPrice();
   const { data: catalog } = useCatalog();
-  const { open, status, error } = useOpenPack();
+  const wallet = useOpenPack();
+  const { bank, fromBank } = useBankPay();
+  const [via, setVia] = useState<'wallet' | 'bank'>('wallet');
+  const status = via === 'bank' ? bank.status : wallet.status;
+  const error = via === 'bank' ? bank.error : wallet.error;
   const [result, setResult] = useState<PackResult | null>(null);
   const [landed, setLanded] = useState(false);
 
@@ -67,8 +72,9 @@ export function GamePage({
     setResult(null);
     setLanded(false);
     emitFx({ type: 'busy' });
+    setVia(fromBank ? 'bank' : 'wallet');
     try {
-      setResult(await open());
+      setResult(fromBank ? (await bank.openFromBank(1))[0] : await wallet.open());
     } catch {
       /* surfaced through `error` */
     }
@@ -125,7 +131,7 @@ export function GamePage({
               ? 'Confirm in wallet…'
               : busy || (result && !landed)
                 ? 'Spinning…'
-                : `${result ? `${verb} again` : verb} · ${priceLabel}`}
+                : `${result ? `${verb} again` : verb} · ${priceLabel}${fromBank ? ' · from bank' : ''}`}
           </button>
         )}
 

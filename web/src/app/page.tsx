@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { Duck } from '@/components/Duck';
 import { FeedTicker } from '@/components/FeedTicker';
+import { BankPanel } from '@/components/BankPanel';
 
 const GAMES = [
   {
@@ -62,6 +63,8 @@ export default function Home() {
           Three ways to pull tokens on Monad. Same on-chain draw, same public odds, different thrill.
         </p>
       </section>
+
+      <BankPanel />
 
       <div className="grid w-full gap-6 sm:grid-cols-3">
         {GAMES.map((g, i) => (

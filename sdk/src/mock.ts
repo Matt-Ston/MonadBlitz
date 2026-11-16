@@ -186,16 +186,31 @@ export function makeMockResult(): PackResult {
 }
 
 // ---------- mock bank (IR-4): MON deposited once, packs paid from it with no wallet popup ----------
+// Kept in localStorage so a page refresh during a demo doesn't wipe the deposit.
+const BANK_KEY = 'coinpack:mockBank';
 let bankWei = 0n;
+try {
+  bankWei = BigInt(localStorage.getItem(BANK_KEY) ?? '0');
+} catch {
+  /* server render or storage blocked: start empty */
+}
+function saveBank(): void {
+  try {
+    localStorage.setItem(BANK_KEY, bankWei.toString());
+  } catch {
+    /* not persisted */
+  }
+  emit();
+}
 export const getMockBank = () => bankWei;
 export function mockBankAdd(wei: bigint): void {
   bankWei += wei;
-  emit();
+  saveBank();
 }
 export function mockBankTake(wei: bigint): void {
   if (wei > bankWei) throw new Error('InsufficientBank: not enough MON in your bank');
   bankWei -= wei;
-  emit();
+  saveBank();
 }
 
 export function recordMockPull(res: PackResult): void {

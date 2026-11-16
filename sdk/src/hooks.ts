@@ -1,5 +1,5 @@
 'use client';
-import { useCallback, useState, useSyncExternalStore } from 'react';
+import { useCallback, useEffect, useState, useSyncExternalStore } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { parseEventLogs, toHex } from 'viem';
 import { type Config, useAccount, useConfig, useReadContract, useSwitchChain, useWriteContract } from 'wagmi';
@@ -99,6 +99,9 @@ function mockUseOpenPacks(): OpenPacksState {
 
 function mockUseBank(): BankState {
   useMockStore();
+  // The saved balance comes from localStorage, so show it only after mount (the server render has none).
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
   const [status, setStatus] = useState<OpenStatus>('idle');
   const [error, setError] = useState<Error>();
   const run = useCallback(async <T,>(fn: () => Promise<T>): Promise<T> => {
@@ -135,7 +138,7 @@ function mockUseBank(): BankState {
       return res;
     });
   }), [run]);
-  return { supported: true, balanceWei: getMockBank(), deposit, withdraw, openFromBank, status, error };
+  return { supported: true, balanceWei: mounted ? getMockBank() : 0n, deposit, withdraw, openFromBank, status, error };
 }
 
 function mockUseHoldings(address?: Hex): { data?: Holding[]; refetch(): void } {

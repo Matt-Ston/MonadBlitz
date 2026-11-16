@@ -1,7 +1,9 @@
 'use client';
 import { useState } from 'react';
 import type { PackResult } from '@/lib/sdk';
-import { MOCK, formatMon, useBank, useCatalog, useConnection, useDemoSettings, useOpenPack, useOpenPacks, usePackPrice } from '@/lib/sdk';
+import Link from 'next/link';
+import { MOCK, formatMon, useCatalog, useConnection, useDemoSettings, useOpenPack, useOpenPacks, usePackPrice } from '@/lib/sdk';
+import { useBankPay } from '@/lib/bankPref';
 import { FAUCET_URL, friendlyError } from '@/lib/ui';
 import { Pack } from '@/components/Pack';
 import { Reveal } from '@/components/Reveal';
@@ -9,7 +11,6 @@ import { FeedTicker } from '@/components/FeedTicker';
 import { Connect } from '@/components/Connect';
 import { MultiReveal } from '@/components/MultiReveal';
 import { BackHome } from '@/components/BackHome';
-import { BankPanel } from '@/components/BankPanel';
 import { emitFx } from '@/lib/fx';
 
 const MULTI = 5;
@@ -31,18 +32,14 @@ export default function PacksPage() {
   const [results, setResults] = useState<PackResult[] | null>(null);
   const [mode, setMode] = useState<'one' | 'multi'>('one');
   const [picked, setPicked] = useState<bigint | null>(null);
-  const bank = useBank();
-  const [payFromBank, setPayFromBank] = useState(true);
+  const { bank, fromBank } = useBankPay();
   const [via, setVia] = useState<'wallet' | 'bank'>('wallet');
-  // An empty bank falls back to paying from the wallet, so the switch never blocks a first-time player.
-  const fromBank = bank.supported && payFromBank && (bank.balanceWei ?? 0n) > 0n;
 
   // The deployed vault has a single price (0.1 MON); the 1 and 5 MON packs exist in mock mode only.
   const sizes = MOCK ? prices : priceWei !== undefined ? [priceWei] : [];
   const active = via === 'bank' ? bank.status : mode === 'one' ? single.status : multi.status;
   const busy = active === 'signing' || active === 'mining';
-  // Bank errors show in the bank panel; this banner is for wallet-paid opens.
-  const err = via === 'wallet' && active === 'error' ? friendlyError(mode === 'one' ? single.error : multi.error) : null;
+  const err = active === 'error' ? friendlyError(via === 'bank' ? bank.error : mode === 'one' ? single.error : multi.error) : null;
 
   async function go(price: bigint, many: boolean) {
     if (MOCK) setPrice(price);
@@ -107,7 +104,11 @@ export default function PacksPage() {
         </button>
       ) : (
         <>
-        {bank.supported && <BankPanel bank={bank} catalog={catalog} payFromBank={payFromBank} setPayFromBank={setPayFromBank} />}
+        {fromBank && (
+          <Link href="/#bank" className="-mt-2 rounded-full border border-emerald-300/40 bg-emerald-400/10 px-4 py-1.5 text-sm font-semibold text-emerald-200 hover:bg-emerald-400/20">
+            Paying from your bank · {formatMon(bank.balanceWei ?? 0n, 2)} MON left
+          </Link>
+        )}
         <div className={`grid w-full gap-6 ${sizes.length > 1 ? 'sm:grid-cols-3' : 'max-w-xs'}`}>
           {sizes.map((p, i) => {
             const look = PACK_LOOK[i % PACK_LOOK.length];
