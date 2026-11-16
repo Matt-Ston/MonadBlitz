@@ -1,7 +1,7 @@
 'use client';
 import { useState } from 'react';
 import type { PackResult } from '@/lib/sdk';
-import { MOCK, formatMon, useCatalog, useConnection, useDemoSettings, useOpenPack, useOpenPacks, usePackPrice } from '@/lib/sdk';
+import { MOCK, formatMon, useBank, useCatalog, useConnection, useDemoSettings, useOpenPack, useOpenPacks, usePackPrice } from '@/lib/sdk';
 import { FAUCET_URL, friendlyError } from '@/lib/ui';
 import { Pack } from '@/components/Pack';
 import { Reveal } from '@/components/Reveal';
@@ -9,6 +9,7 @@ import { FeedTicker } from '@/components/FeedTicker';
 import { Connect } from '@/components/Connect';
 import { MultiReveal } from '@/components/MultiReveal';
 import { BackHome } from '@/components/BackHome';
+import { BankPanel } from '@/components/BankPanel';
 import { emitFx } from '@/lib/fx';
 
 const MULTI = 5;
@@ -30,22 +31,34 @@ export default function PacksPage() {
   const [results, setResults] = useState<PackResult[] | null>(null);
   const [mode, setMode] = useState<'one' | 'multi'>('one');
   const [picked, setPicked] = useState<bigint | null>(null);
+  const bank = useBank();
+  const [payFromBank, setPayFromBank] = useState(true);
+  const [via, setVia] = useState<'wallet' | 'bank'>('wallet');
+  // An empty bank falls back to paying from the wallet, so the switch never blocks a first-time player.
+  const fromBank = bank.supported && payFromBank && (bank.balanceWei ?? 0n) > 0n;
 
   // The deployed vault has a single price (0.1 MON); the 1 and 5 MON packs exist in mock mode only.
   const sizes = MOCK ? prices : priceWei !== undefined ? [priceWei] : [];
-  const active = mode === 'one' ? single.status : multi.status;
+  const active = via === 'bank' ? bank.status : mode === 'one' ? single.status : multi.status;
   const busy = active === 'signing' || active === 'mining';
-  const err = active === 'error' ? friendlyError(mode === 'one' ? single.error : multi.error) : null;
+  // Bank errors show in the bank panel; this banner is for wallet-paid opens.
+  const err = via === 'wallet' && active === 'error' ? friendlyError(mode === 'one' ? single.error : multi.error) : null;
 
   async function go(price: bigint, many: boolean) {
     if (MOCK) setPrice(price);
     setPicked(price);
     setMode(many ? 'multi' : 'one');
+    setVia(fromBank ? 'bank' : 'wallet');
     setResult(null);
     setResults(null);
     emitFx({ type: 'busy' });
     try {
-      if (many) setResults(await multi.openMany(MULTI));
+      if (fromBank) {
+        // One transaction for the whole batch, paid from the bank.
+        const out = await bank.openFromBank(many ? MULTI : 1);
+        if (many) setResults(out);
+        else setResult(out[0]);
+      } else if (many) setResults(await multi.openMany(MULTI));
       else setResult(await single.open());
     } catch {
       /* surfaced through `error` */
@@ -93,6 +106,8 @@ export default function PacksPage() {
           Switch to Monad Testnet
         </button>
       ) : (
+        <>
+        {bank.supported && <BankPanel bank={bank} catalog={catalog} payFromBank={payFromBank} setPayFromBank={setPayFromBank} />}
         <div className={`grid w-full gap-6 ${sizes.length > 1 ? 'sm:grid-cols-3' : 'max-w-xs'}`}>
           {sizes.map((p, i) => {
             const look = PACK_LOOK[i % PACK_LOOK.length];
@@ -111,19 +126,22 @@ export default function PacksPage() {
                   disabled={busy}
                   className="w-full rounded-full bg-accent px-6 py-3 text-lg font-bold text-white shadow-[0_10px_30px_rgba(131,110,249,0.5)] transition hover:brightness-110 disabled:cursor-wait disabled:opacity-60"
                 >
-                  {mine && mode === 'one' ? (single.status === 'signing' ? 'Confirm in wallet…' : 'Opening…') : 'Open 1'}
+                  {mine && mode === 'one' ? (active === 'signing' ? 'Confirm in wallet…' : 'Opening…') : fromBank ? 'Open 1 · from bank' : 'Open 1'}
                 </button>
                 <button
                   onClick={() => go(p, true)}
                   disabled={busy}
                   className="w-full rounded-full border-2 border-yellow-300 bg-yellow-300/10 px-6 py-3 text-lg font-bold text-yellow-200 transition hover:bg-yellow-300/20 disabled:cursor-wait disabled:opacity-60"
                 >
-                  {mine && mode === 'multi' ? `Opening ${MULTI}…` : `Open ${MULTI} · ${formatMon(p * BigInt(MULTI), 2)} MON`}
+                  {mine && mode === 'multi'
+                    ? `Opening ${MULTI}…`
+                    : `Open ${MULTI} · ${formatMon(p * BigInt(MULTI), 2)} MON${fromBank ? ' · 1 tx' : ''}`}
                 </button>
               </div>
             );
           })}
         </div>
+        </>
       )}
 
       {err && (

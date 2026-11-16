@@ -9,6 +9,8 @@ import { Connect } from './Connect';
 import { emitFx } from '@/lib/fx';
 import { ReturnStats } from './ReturnStats';
 import { BackHome } from './BackHome';
+import { ShareButton } from './ShareButton';
+import { shareWorthy } from '@/lib/share';
 
 /** The 3–5 tokens behind a spin: same pulls as a pack, shown all at once after the machine lands. */
 function GameResult({ result, catalog }: { result: PackResult; catalog?: TokenInfo[] }) {
@@ -23,6 +25,7 @@ function GameResult({ result, catalog }: { result: PackResult; catalog?: TokenIn
           <Card key={p.slot} pull={p} token={findToken(catalog, p.token)} flipped rarity={displayRarity(p, result)} uncommon={isUncommon(p, result)} />
         ))}
       </div>
+      {shareWorthy(result) && <ShareButton result={result} catalog={catalog} />}
       <p className="text-xs text-white/40">
         Spin #{result.requestId} · {(result.multiplierBps / 10000).toFixed(2)}x ·{' '}
         <a className="underline hover:text-white" href={`${EXPLORER_URL}/tx/${result.txHash}`} target="_blank" rel="noreferrer">

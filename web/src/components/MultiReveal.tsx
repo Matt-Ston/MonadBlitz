@@ -6,6 +6,8 @@ import { RARITY_GLOW, displayRarity, findToken, isUncommon } from '@/lib/ui';
 import { emitFx, rectOf } from '@/lib/fx';
 import { Card } from './Card';
 import { ReturnStats } from './ReturnStats';
+import { ShareButton } from './ShareButton';
+import { bestShareable } from '@/lib/share';
 
 /**
  * Several packs opened at once. Every Common card is shown straight away; every Rare-or-better card
@@ -28,6 +30,7 @@ export function MultiReveal({ results, catalog, onAgain }: { results: PackResult
   const done = hidden.length === 0;
   const paid = results.reduce((s, r) => s + BigInt(r.pricePaidWei), 0n);
   const pulled = results.reduce((s, r) => s + BigInt(r.totalValueWei), 0n);
+  const shareable = useMemo(() => bestShareable(results), [results]);
   const soFar = cards.filter(isUp).reduce((s, c) => s + BigInt(c.pull.valueWei), 0n);
 
   function flip(c: (typeof cards)[number]) {
@@ -89,9 +92,12 @@ export function MultiReveal({ results, catalog, onAgain }: { results: PackResult
       <ReturnStats paidWei={paid} pulledWei={done ? pulled : soFar} label={done ? 'Pulled' : 'Showing'} />
 
       {done && (
-        <button onClick={onAgain} className="rounded-full bg-accent px-8 py-3 text-lg font-bold text-white transition hover:brightness-110">
-          Open {results.length} more
-        </button>
+        <div className="flex flex-wrap items-center justify-center gap-3">
+          {shareable && <ShareButton result={shareable} catalog={catalog} />}
+          <button onClick={onAgain} className="rounded-full bg-accent px-8 py-3 text-lg font-bold text-white transition hover:brightness-110">
+            Open {results.length} more
+          </button>
+        </div>
       )}
     </div>
   );

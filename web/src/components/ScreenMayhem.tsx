@@ -3,69 +3,56 @@ import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { onFx } from '@/lib/fx';
 import { Duck } from './Duck';
+import { Banner, Flash, Rays, j, range } from './sceneKit';
+import {
+  BloodMoon, BubbleBath, CrownDrop, Eruption, Fireworks, Galaxy, HallOfFame, Hyperspace, Lightning, MeteorShower, RainbowRide, TreasureChest,
+} from './ScreenScenes';
 
 /**
  * Full-screen scenes for the rare pulls. They cover the whole viewport, not just the card:
- *   Epic            → Fly-by: a V of ducks crosses the screen
- *   Legendary       → Stampede (ducks charge across) or Golden Rain (coins and parachuting ducks)
- *   Mythic          → Quackzilla: a giant duck in shades rises over the page while it shakes
- *   Ultra Legendary → Disco Duck: spinning lights, duck rain, a dancing line and a crowned giant
+ *   Epic            → Tidal Wave, Fly-by, Fireworks, Bubble Bath, Lightning
+ *   Legendary       → Stampede, Golden Rain, Treasure Chest, Crown Drop, Hall of Fame
+ *   Mythic          → Quackzilla, Eruption, Meteor Shower, Blood Moon
+ *   Ultra Legendary → Disco Duck, Hyperspace, Rainbow Ride, Galaxy
+ * One scene is picked at random per pull (the newer ones live in ScreenScenes.tsx).
  * Decoration only, played after the card is already revealed.
  */
-type Kind = 'ripple' | 'flyby' | 'wave' | 'stampede' | 'goldrain' | 'quackzilla' | 'disco' | 'gloom';
-const DURATION: Record<Kind, number> = { ripple: 2400, flyby: 2400, wave: 4000, stampede: 3400, goldrain: 3600, quackzilla: 4000, disco: 5600, gloom: 3600 };
+type Kind =
+  | 'flyby' | 'wave' | 'fireworks' | 'bubbles' | 'lightning'
+  | 'stampede' | 'goldrain' | 'treasure' | 'crown' | 'halloffame'
+  | 'quackzilla' | 'eruption' | 'meteors' | 'bloodmoon'
+  | 'disco' | 'hyperspace' | 'rainbow' | 'galaxy'
+  | 'gloom';
+const DURATION: Record<Kind, number> = {
+  flyby: 2400, wave: 4000, fireworks: 3600, bubbles: 3600, lightning: 3200,
+  stampede: 3400, goldrain: 3600, treasure: 3800, crown: 3800, halloffame: 4000,
+  quackzilla: 4000, eruption: 4000, meteors: 4000, bloodmoon: 4200,
+  disco: 5600, hyperspace: 4800, rainbow: 4800, galaxy: 5000,
+  gloom: 3600,
+};
 const MAIN_CLASS: Partial<Record<Kind, string>> = {
-  flyby: 'fx-bright', wave: 'fx-under', goldrain: 'fx-bright', stampede: 'fx-rumble', quackzilla: 'fx-shake', disco: 'fx-disco', gloom: 'fx-gloom',
+  flyby: 'fx-bright', wave: 'fx-under', fireworks: 'fx-bright', lightning: 'fx-shake',
+  goldrain: 'fx-bright', stampede: 'fx-rumble', treasure: 'fx-bright', crown: 'fx-rumble',
+  quackzilla: 'fx-shake', eruption: 'fx-shake', meteors: 'fx-rumble',
+  disco: 'fx-disco', hyperspace: 'fx-disco', rainbow: 'fx-bright', galaxy: 'fx-disco',
+  gloom: 'fx-gloom',
+};
+const POOL: Partial<Record<number, Kind[]>> = {
+  2: ['wave', 'flyby', 'fireworks', 'bubbles', 'lightning'],
+  3: ['stampede', 'goldrain', 'treasure', 'crown', 'halloffame'],
+  4: ['quackzilla', 'eruption', 'meteors', 'bloodmoon'],
+  5: ['disco', 'hyperspace', 'rainbow', 'galaxy'],
 };
 const ALL_MAIN = ['fx-under', 'fx-bright', 'fx-rumble', 'fx-shake', 'fx-disco', 'fx-gloom'];
 
+let lastKind: Kind | null = null;
+/** A random scene for the rarity (Epic and up), never the same one twice in a row. */
 function kindFor(rarity: number): Kind | null {
-  if (rarity >= 5) return 'disco';
-  if (rarity === 4) return 'quackzilla';
-  if (rarity === 3) return Math.random() < 0.5 ? 'stampede' : 'goldrain';
-  if (rarity === 2) return Math.random() < 0.7 ? 'wave' : 'flyby'; // Epic: usually the tidal wave
-  return null;
-}
-
-// Deterministic jitter so a scene doesn't reshuffle on re-render.
-const j = (i: number, k: number) => {
-  const x = Math.sin(i * 12.9898 + k * 78.233) * 43758.5453;
-  return x - Math.floor(x);
-};
-const range = (n: number) => Array.from({ length: n }, (_, i) => i);
-
-/** Opening flash: the whole screen whites out in the scene's colour, then clears. */
-function Flash({ color }: { color: string }) {
-  return (
-    <motion.div
-      className="absolute inset-0"
-      style={{ background: `radial-gradient(circle at 50% 45%, #ffffff, ${color} 45%, ${color}55 100%)`, mixBlendMode: 'screen' }}
-      initial={{ opacity: 1 }}
-      animate={{ opacity: [1, 0.85, 0] }}
-      transition={{ duration: 0.9, times: [0, 0.25, 1], ease: 'easeOut' }}
-    />
-  );
-}
-
-/** Rotating sun rays behind everything, filling the screen. */
-function Rays({ color, duration }: { color: string; duration: number }) {
-  return (
-    <motion.div
-      className="absolute left-1/2 top-1/2 h-[240vmax] w-[240vmax]"
-      style={{ marginLeft: '-120vmax', marginTop: '-120vmax', background: `repeating-conic-gradient(${color} 0deg 6deg, transparent 6deg 18deg)`, mixBlendMode: 'screen' }}
-      initial={{ opacity: 0, rotate: 0 }}
-      animate={{ opacity: [0, 0.8, 0.7, 0], rotate: 120 }}
-      transition={{ duration, ease: 'linear' }}
-    />
-  );
-}
-
-function Banner({ text, className }: { text: string; className: string }) {
-  return (
-    <div className={`fx-marquee absolute left-0 top-[28vh] whitespace-nowrap text-[18vw] font-black uppercase leading-none tracking-tight drop-shadow-[0_0_40px_currentColor] ${className}`}>
-      {text}
-    </div>
-  );
+  const pool = POOL[Math.min(rarity, 5)];
+  if (!pool) return null;
+  const options = pool.length > 1 ? pool.filter((k) => k !== lastKind) : pool;
+  lastKind = options[Math.floor(Math.random() * options.length)];
+  return lastKind;
 }
 
 function FlyBy() {
@@ -294,57 +281,6 @@ function Disco() {
   );
 }
 
-/** Uncommon: green ripples spread across the whole screen while a line of ducklings paddles by. */
-function Ripple() {
-  return (
-    <>
-      <motion.div
-        className="absolute inset-0"
-        style={{ boxShadow: 'inset 0 0 220px 70px rgba(52,211,153,0.75)' }}
-        initial={{ opacity: 0 }}
-        animate={{ opacity: [0, 1, 0.5, 0] }}
-        transition={{ duration: 2.2 }}
-      />
-      {range(5).map((i) => (
-        <motion.div
-          key={`ring-${i}`}
-          className="absolute left-1/2 top-[45%] h-40 w-40 rounded-full border-[6px] border-emerald-300"
-          style={{ marginLeft: '-5rem', marginTop: '-5rem', boxShadow: '0 0 30px rgba(52,211,153,0.9), inset 0 0 30px rgba(52,211,153,0.5)' }}
-          initial={{ scale: 0.1, opacity: 0.95 }}
-          animate={{ scale: 14, opacity: 0 }}
-          transition={{ duration: 1.7, delay: i * 0.22, ease: 'easeOut' }}
-        />
-      ))}
-      {range(26).map((i) => {
-        const s = 8 + j(i, 1) * 14;
-        return (
-          <motion.span
-            key={`g-${i}`}
-            className="absolute bottom-0 rotate-45 bg-emerald-300"
-            style={{ left: `${j(i, 2) * 100}vw`, width: s, height: s, boxShadow: '0 0 14px rgba(52,211,153,0.95)' }}
-            initial={{ y: '5vh', opacity: 0 }}
-            animate={{ y: `${-40 - j(i, 3) * 60}vh`, opacity: [0, 1, 0], rotate: 225 }}
-            transition={{ duration: 1.4 + j(i, 4) * 0.8, delay: j(i, 5) * 0.8, ease: 'easeOut' }}
-          />
-        );
-      })}
-      <Banner text="Uncommon!" className="text-emerald-300" />
-      {/* ducklings paddling across in a line, bobbing one after another */}
-      {range(6).map((i) => (
-        <motion.div
-          key={`d-${i}`}
-          className="absolute bottom-[10vh] left-0"
-          initial={{ x: `${-14 - i * 11}vw` }}
-          animate={{ x: `${112 - i * 11}vw`, y: [0, -16, 0, -16, 0, -16, 0] }}
-          transition={{ x: { duration: 2.2, ease: 'linear' }, y: { duration: 2.2, delay: i * 0.08 } }}
-        >
-          <Duck size={i === 0 ? 150 : 90} />
-        </motion.div>
-      ))}
-    </>
-  );
-}
-
 /** Epic: a tidal wave floods the screen, bubbles rise, and the duck surfs across the crest. */
 function Wave() {
   const crest = 'M0 30 Q75 0 150 30 T300 30 T450 30 T600 30 T750 30 T900 30 T1050 30 T1200 30 V60 H0 Z';
@@ -474,7 +410,11 @@ function Gloom() {
 }
 
 const SCENES: Record<Kind, () => JSX.Element> = {
-  ripple: Ripple, flyby: FlyBy, wave: Wave, stampede: Stampede, goldrain: GoldRain, quackzilla: Quackzilla, disco: Disco, gloom: Gloom,
+  flyby: FlyBy, wave: Wave, fireworks: Fireworks, bubbles: BubbleBath, lightning: Lightning,
+  stampede: Stampede, goldrain: GoldRain, treasure: TreasureChest, crown: CrownDrop, halloffame: HallOfFame,
+  quackzilla: Quackzilla, eruption: Eruption, meteors: MeteorShower, bloodmoon: BloodMoon,
+  disco: Disco, hyperspace: Hyperspace, rainbow: RainbowRide, galaxy: Galaxy,
+  gloom: Gloom,
 };
 
 export function ScreenMayhem() {
@@ -484,9 +424,8 @@ export function ScreenMayhem() {
     let timer: ReturnType<typeof setTimeout> | undefined;
     const off = onFx((e) => {
       if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-      // Card pulls pick a win scene by rarity; a pack that lost a fifth or more gets the sad one.
-      const kind: Kind | null =
-        e.type === 'pull' ? (e.uncommon ? 'ripple' : kindFor(e.rarity)) : e.type === 'pack' && e.bad ? 'gloom' : null;
+      // Card pulls pick a win scene by rarity (Epic and up); a pack that lost a fifth or more gets the sad one.
+      const kind: Kind | null = e.type === 'pull' ? kindFor(e.rarity) : e.type === 'pack' && e.bad ? 'gloom' : null;
       if (!kind) return;
       const main = document.querySelector('main');
       const cls = MAIN_CLASS[kind];

@@ -6,10 +6,10 @@ import { type Config, useAccount, useConfig, useReadContract, useSwitchChain, us
 import { multicall, readContract, waitForTransactionReceipt } from 'wagmi/actions';
 import { erc20Abi, packVaultAbi, priceOracleAbi } from './abi';
 import { CHAIN_ID } from './chain';
-import { PACK_VAULT, PRICE_ORACLE, TOKENS, tokenByAddress } from './contracts';
+import { BANK_SUPPORTED, PACK_VAULT, PRICE_ORACLE, TOKENS, tokenByAddress } from './contracts';
 import {
-  CATALOG, MOCK, MOCK_ADDRESS, MOCK_PACK_PRICES, ODDS, balances, feed, getDemoBoost, getMockPackPrice, getVersion,
-  makeMockResult, recordMockPull, setDemoBoost, setMockPackPrice, subscribe,
+  CATALOG, MOCK, MOCK_ADDRESS, MOCK_PACK_PRICES, ODDS, balances, feed, getDemoBoost, getMockBank, getMockPackPrice, getVersion,
+  makeMockResult, mockBankAdd, mockBankTake, recordMockPull, setDemoBoost, setMockPackPrice, subscribe,
 } from './mock';
 import { TIERS } from './types';
 import type { FeedItem, Hex, Holding, Odds, PackResult, Rarity, TokenInfo } from './types';
@@ -21,6 +21,19 @@ type OpenStatus = 'idle' | 'signing' | 'mining' | 'done' | 'error';
 type ConnectionState = { address?: Hex; isConnected: boolean; isWrongChain: boolean; switchChain(): Promise<void> };
 type OpenPackState = { open(): Promise<PackResult>; status: OpenStatus; error?: Error; last?: PackResult };
 type OpenPacksState = { openMany(count: number): Promise<PackResult[]>; status: OpenStatus; error?: Error };
+/**
+ * IR-4 bank: deposit MON once, then open 1–10 packs per transaction paid from the balance (no MON sent per pack,
+ * one signature and one gas charge for the whole batch). `supported` is false on vaults without the bank.
+ */
+export type BankState = {
+  supported: boolean;
+  balanceWei?: bigint;
+  deposit(wei: bigint): Promise<void>;
+  withdraw(wei: bigint): Promise<void>;
+  openFromBank(count: number): Promise<PackResult[]>;
+  status: OpenStatus;
+  error?: Error;
+};
 
 const E18 = 10n ** 18n;
 
@@ -82,6 +95,47 @@ function mockUseOpenPacks(): OpenPacksState {
     return results;
   }, []);
   return { openMany, status };
+}
+
+function mockUseBank(): BankState {
+  useMockStore();
+  const [status, setStatus] = useState<OpenStatus>('idle');
+  const [error, setError] = useState<Error>();
+  const run = useCallback(async <T,>(fn: () => Promise<T>): Promise<T> => {
+    setError(undefined);
+    try {
+      const out = await fn();
+      setStatus('done');
+      return out;
+    } catch (e) {
+      const err = e instanceof Error ? e : new Error(String(e));
+      setError(err);
+      setStatus('error');
+      throw err;
+    }
+  }, []);
+  const deposit = useCallback((wei: bigint) => run(async () => {
+    setStatus('signing');
+    await new Promise((r) => setTimeout(r, 400));
+    mockBankAdd(wei);
+  }), [run]);
+  const withdraw = useCallback((wei: bigint) => run(async () => {
+    setStatus('signing');
+    await new Promise((r) => setTimeout(r, 400));
+    mockBankTake(wei);
+  }), [run]);
+  // Paid from the bank: no wallet step, straight to the draw.
+  const openFromBank = useCallback((count: number) => run(async () => {
+    mockBankTake(getMockPackPrice() * BigInt(count));
+    setStatus('mining');
+    await new Promise((r) => setTimeout(r, 900));
+    return Array.from({ length: count }, () => {
+      const res = makeMockResult();
+      recordMockPull(res);
+      return res;
+    });
+  }), [run]);
+  return { supported: true, balanceWei: getMockBank(), deposit, withdraw, openFromBank, status, error };
 }
 
 function mockUseHoldings(address?: Hex): { data?: Holding[]; refetch(): void } {
@@ -203,6 +257,31 @@ function realUseOdds(): { data: Odds } {
   return { data: q.data ?? ODDS };
 }
 
+/** Every PackOpened from our vault in a receipt, in log order (one per pack). */
+function packResultsFromLogs(logs: Parameters<typeof parseEventLogs>[0]['logs'], txHash: Hex): PackResult[] {
+  return parseEventLogs({ abi: packVaultAbi, eventName: 'PackOpened', logs })
+    .filter((l) => l.address.toLowerCase() === PACK_VAULT)
+    .map(({ args: a }) => ({
+      requestId: a.requestId.toString(),
+      buyer: a.buyer.toLowerCase() as Hex,
+      txHash,
+      openedAt: Math.floor(Date.now() / 1000),
+      pricePaidWei: a.pricePaid.toString(),
+      tier: TIERS[a.tier],
+      multiplierBps: a.multiplierBps,
+      totalValueWei: a.totalValueWei.toString(),
+      seed: a.seed,
+      pulls: a.pulls.map((p, slot) => ({
+        slot,
+        token: p.token.toLowerCase() as Hex,
+        symbol: tokenByAddress(p.token)?.symbol ?? '???',
+        rarity: p.rarity as Rarity,
+        amount: p.amount.toString(),
+        valueWei: p.valueWei.toString(),
+      })),
+    }));
+}
+
 function realUseOpenPack(): OpenPackState {
   const config = useConfig();
   const queryClient = useQueryClient();
@@ -231,30 +310,8 @@ function realUseOpenPack(): OpenPackState {
       setStatus('mining');
       const receipt = await waitForTransactionReceipt(config, { hash: txHash, chainId: CHAIN_ID });
       if (receipt.status !== 'success') throw new Error(`Transaction reverted: ${txHash}`);
-      const log = parseEventLogs({ abi: packVaultAbi, eventName: 'PackOpened', logs: receipt.logs }).find(
-        (l) => l.address.toLowerCase() === PACK_VAULT,
-      );
-      if (!log) throw new Error(`PackOpened event not found in ${txHash}`);
-      const a = log.args;
-      const res: PackResult = {
-        requestId: a.requestId.toString(),
-        buyer: a.buyer.toLowerCase() as Hex,
-        txHash,
-        openedAt: Math.floor(Date.now() / 1000),
-        pricePaidWei: a.pricePaid.toString(),
-        tier: TIERS[a.tier],
-        multiplierBps: a.multiplierBps,
-        totalValueWei: a.totalValueWei.toString(),
-        seed: a.seed,
-        pulls: a.pulls.map((p, slot) => ({
-          slot,
-          token: p.token.toLowerCase() as Hex,
-          symbol: tokenByAddress(p.token)?.symbol ?? '???',
-          rarity: p.rarity as Rarity,
-          amount: p.amount.toString(),
-          valueWei: p.valueWei.toString(),
-        })),
-      };
+      const res = packResultsFromLogs(receipt.logs, txHash)[0];
+      if (!res) throw new Error(`PackOpened event not found in ${txHash}`);
       prependLocalFeed({
         requestId: res.requestId,
         buyer: res.buyer,
@@ -347,6 +404,64 @@ function realUseOpenPacks(): OpenPacksState {
   return { openMany, status: single.status, error: single.error };
 }
 
+function realUseBank(): BankState {
+  const config = useConfig();
+  const queryClient = useQueryClient();
+  const { address } = useAccount();
+  const { writeContractAsync } = useWriteContract();
+  const [status, setStatus] = useState<OpenStatus>('idle');
+  const [error, setError] = useState<Error>();
+  const bank = useReadContract({
+    address: PACK_VAULT, abi: packVaultAbi, functionName: 'bankOf', args: address ? [address] : undefined, chainId: CHAIN_ID,
+    query: { enabled: BANK_SUPPORTED && !!address },
+  });
+
+  const send = useCallback(
+    async (write: () => Promise<Hex>) => {
+      if (!BANK_SUPPORTED) throw new Error('The bank arrives with the next contract deploy.');
+      setError(undefined);
+      setStatus('signing');
+      try {
+        const txHash = await write();
+        setStatus('mining');
+        const receipt = await waitForTransactionReceipt(config, { hash: txHash, chainId: CHAIN_ID });
+        if (receipt.status !== 'success') throw new Error(`Transaction reverted: ${txHash}`);
+        void bank.refetch();
+        setStatus('done');
+        return { receipt, txHash };
+      } catch (e) {
+        const err = e instanceof Error ? e : new Error(String(e));
+        setError(err);
+        setStatus('error');
+        throw err;
+      }
+    },
+    [config, bank],
+  );
+
+  const deposit = useCallback(async (wei: bigint) => {
+    await send(() => writeContractAsync({ address: PACK_VAULT, abi: packVaultAbi, functionName: 'deposit', value: wei, chainId: CHAIN_ID }));
+  }, [send, writeContractAsync]);
+  const withdraw = useCallback(async (wei: bigint) => {
+    await send(() => writeContractAsync({ address: PACK_VAULT, abi: packVaultAbi, functionName: 'withdrawBank', args: [wei], chainId: CHAIN_ID }));
+  }, [send, writeContractAsync]);
+  const openFromBank = useCallback(async (count: number) => {
+    const userSeed = toHex(crypto.getRandomValues(new Uint8Array(32)));
+    const { receipt, txHash } = await send(() =>
+      writeContractAsync({ address: PACK_VAULT, abi: packVaultAbi, functionName: 'openPacksFromBank', args: [BigInt(count), userSeed], chainId: CHAIN_ID }),
+    );
+    const results = packResultsFromLogs(receipt.logs, txHash);
+    if (results.length === 0) throw new Error(`PackOpened event not found in ${txHash}`);
+    for (const r of results) {
+      prependLocalFeed({ requestId: r.requestId, buyer: r.buyer, tier: r.tier, multiplierBps: r.multiplierBps, totalValueWei: r.totalValueWei, openedAt: r.openedAt });
+    }
+    void queryClient.invalidateQueries({ queryKey: HOLDINGS_KEY });
+    return results;
+  }, [send, queryClient, writeContractAsync]);
+
+  return { supported: BANK_SUPPORTED, balanceWei: bank.data, deposit, withdraw, openFromBank, status, error };
+}
+
 // ============================================================ §3.9 exports
 
 export const useConnection: () => ConnectionState = MOCK ? mockUseConnection : realUseConnection;
@@ -359,6 +474,9 @@ export const useRecentFeed: () => { data?: FeedItem[] } = MOCK ? mockUseRecentFe
 
 /** Open several packs in one go. Results are in the order they were opened. */
 export const useOpenPacks: () => OpenPacksState = MOCK ? mockUseOpenPacks : realUseOpenPacks;
+
+/** IR-4 deposit bank. Mock mode always has it; real mode only once the vault is redeployed with it. */
+export const useBank: () => BankState = MOCK ? mockUseBank : realUseBank;
 
 /** Mock-mode-only knobs for demos: boosted odds and the pack price. They do nothing in real mode. */
 export function useDemoSettings(): { demo: boolean; setDemo(on: boolean): void; prices: bigint[]; setPrice(wei: bigint): void } {

@@ -100,3 +100,79 @@ function _buildPulls(bytes32 seed, Tier tier, uint256 totalValueWei) internal vi
 - Update tests: `pulls.length` is in `[3, 5]`; values still sum to `totalValueWei`; on LEGENDARY/ULTRA packs `pulls[n-1].rarity == 3`.
 - `minGasLeft` (600k, sized for 10 mints) can be lowered to roughly 60% if gas tests agree; leaving it is safe.
 - Regenerate the ABI, redeploy (with IR-2), commit `deployments/monad-testnet.json` with the new `deployBlock`.
+
+---
+
+## IR-4: Pack bank (deposit once, open many packs per transaction) (§3.5, §3.6)
+
+**Status:** **requested by the team** (Person 2, 2026-11-15). sdk and web are done on `main`: mock mode has a working bank; real mode shows it automatically once `deployments/monad-testnet.json` has `"bank": true`. **Waiting on Person 1:** add this to the same redeploy as IR-2 + IR-3.
+
+**Why (gas):** today every pack is its own transaction carrying 0.1 MON. With a bank the player deposits once, then `openPacksFromBank(5, seed)` opens 5 packs in **one** transaction with no value attached: one signature, one 21k base cost and one wallet gas-limit buffer instead of five (Monad bills the full gas limit, so padding per tx is real money). The per-pack draw and mint cost is unchanged; the saving is the per-transaction overhead and the popups.
+
+### `PackVault.sol`
+```solidity
+mapping(address => uint256) public bankOf;
+uint256 public totalBanked;                    // players' money, never the house's
+uint256 public constant MAX_BATCH = 10;
+
+event Deposited(address indexed user, uint256 amount);
+event Withdrawn(address indexed user, uint256 amount);
+error InsufficientBank();
+error BadCount();
+
+function deposit() external payable {
+    bankOf[msg.sender] += msg.value;
+    totalBanked += msg.value;
+    emit Deposited(msg.sender, msg.value);
+}
+
+function withdrawBank(uint256 amount) external {
+    if (amount > bankOf[msg.sender]) revert InsufficientBank();
+    bankOf[msg.sender] -= amount;                 // effects before the call
+    totalBanked -= amount;
+    (bool ok,) = msg.sender.call{value: amount}("");
+    require(ok, "withdraw failed");
+    emit Withdrawn(msg.sender, amount);
+}
+
+function openPacksFromBank(uint256 count, bytes32 userSeed) external returns (uint256 firstRequestId) {
+    if (count == 0 || count > MAX_BATCH) revert BadCount();
+    if (gasleft() < minGasLeft * count) revert NotEnoughGas();
+    if (msg.sender != tx.origin) revert NoContracts();
+    uint256 cost = packPrice * count;
+    if (cost > bankOf[msg.sender]) revert InsufficientBank();
+    bankOf[msg.sender] -= cost;
+    totalBanked -= cost;                          // the pack price now belongs to the house
+    firstRequestId = nextRequestId;
+    for (uint256 i; i < count; ++i) _open(keccak256(abi.encode(userSeed, i)), packPrice);
+}
+
+// openPack keeps its behaviour, refactored to share the draw:
+function openPack(bytes32 userSeed) external payable returns (uint256) {
+    if (gasleft() < minGasLeft) revert NotEnoughGas();
+    if (msg.value != packPrice) revert WrongPayment();
+    if (msg.sender != tx.origin) revert NoContracts();
+    return _open(userSeed, packPrice);
+}
+
+function _open(bytes32 userSeed, uint256 price) internal returns (uint256 requestId) {
+    if (_catalog.length == 0) revert CatalogEmpty();
+    requestId = nextRequestId++;
+    bytes32 seed = keccak256(abi.encode(blockhash(block.number - 1), block.prevrandao, block.timestamp, userSeed, msg.sender, requestId));
+    // ... unchanged: drawMultiplier, _buildPulls, mint, emit PackOpened (one event per pack)
+}
+
+// The owner sweep must leave players' deposits alone:
+function withdraw(address payable to) external onlyOwner {
+    (bool ok,) = to.call{value: address(this).balance - totalBanked}("");
+    require(ok, "withdraw failed");
+}
+```
+
+### Deployment file
+Add `"bank": true` to `deployments/monad-testnet.json`. The sdk reads it (`BANK_SUPPORTED`) to show the bank in real mode.
+
+### Tests
+- deposit → `bankOf` and `totalBanked` go up; withdrawBank sends MON back and reverts with `InsufficientBank` above the balance.
+- `openPacksFromBank(5, s)` emits 5 `PackOpened` with consecutive request ids, debits exactly `5 * packPrice`, and reverts on `count` 0 or 11.
+- owner `withdraw` can't touch `totalBanked`.

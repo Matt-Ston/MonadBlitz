@@ -2,7 +2,7 @@
 
 > Working name "CoinPack". Rename freely; nothing depends on the name.
 > Target: Monad Blitz hackathon, Monad **testnet** (EVM), team of 4, **3 hours total**.
-> Doc version: **v3.0** (2026-11-15). v2 cuts scope for a 3-hour build (see §13). v2.1 adds the §15 integration checklist (additive; §3 shapes unchanged). v3.0 adopts IR-2 (six pack tiers, `contracts/INTERFACE_REQUESTS.md`) with IR-1's card odds bundled: §3.3, §3.5 `Tier`, §3.7 `Tier`/`TIERS`. v3.1 adopts IR-3: 3–5 cards per pack (§3.3 steps 4–5, §3.5 event `Pull[]`). Bump the version when any §3 interface changes.
+> Doc version: **v3.0** (2026-11-15). v2 cuts scope for a 3-hour build (see §13). v2.1 adds the §15 integration checklist (additive; §3 shapes unchanged). v3.0 adopts IR-2 (six pack tiers, `contracts/INTERFACE_REQUESTS.md`) with IR-1's card odds bundled: §3.3, §3.5 `Tier`, §3.7 `Tier`/`TIERS`. v3.1 adopts IR-3: 3–5 cards per pack (§3.3 steps 4–5, §3.5 event `Pull[]`). IR-4 (pack bank: `deposit`, `withdrawBank`, `openPacksFromBank`, deployment flag `"bank": true`) is specced in `contracts/INTERFACE_REQUESTS.md` and live in the sdk/web behind that flag. Bump the version when any §3 interface changes.
 
 ---
 

@@ -48,6 +48,17 @@ export const packVaultAbi = [
       { name: 'pulls', type: 'tuple[10]', indexed: false, components: pullComponents },
     ],
   },
+  // IR-4 bank (only on vaults whose deployment file has `"bank": true`; see BANK_SUPPORTED).
+  { type: 'function', name: 'bankOf', stateMutability: 'view', inputs: [{ name: 'user', type: 'address' }], outputs: [{ name: '', type: 'uint256' }] },
+  { type: 'function', name: 'deposit', stateMutability: 'payable', inputs: [], outputs: [] },
+  { type: 'function', name: 'withdrawBank', stateMutability: 'nonpayable', inputs: [{ name: 'amount', type: 'uint256' }], outputs: [] },
+  {
+    type: 'function', name: 'openPacksFromBank', stateMutability: 'nonpayable',
+    inputs: [{ name: 'count', type: 'uint256' }, { name: 'userSeed', type: 'bytes32' }],
+    outputs: [{ name: 'firstRequestId', type: 'uint256' }],
+  },
+  { type: 'error', name: 'InsufficientBank', inputs: [] },
+  { type: 'error', name: 'BadCount', inputs: [] },
   { type: 'error', name: 'WrongPayment', inputs: [] },
   { type: 'error', name: 'NoContracts', inputs: [] },
   { type: 'error', name: 'NotEnoughGas', inputs: [] },

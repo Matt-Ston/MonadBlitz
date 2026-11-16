@@ -155,10 +155,19 @@ export function friendlyError(e?: Error): { text: string; needsMon: boolean } | 
     return { text: 'Gas limit too low. Let your wallet estimate gas (don’t set it manually) and try again.', needsMon: false };
   if (/ZeroPrice/.test(msg)) return { text: 'A token in this pack has no price yet. Try again in a minute.', needsMon: false };
   if (/CatalogEmpty/.test(msg)) return { text: 'The pack vault isn’t set up yet. Try again shortly.', needsMon: false };
+  if (/InsufficientBank/.test(msg)) return { text: 'Not enough MON in your bank for that. Deposit more, or turn off “Pay from bank”.', needsMon: false };
   if (/insufficient funds|insufficient balance|exceeds (the )?balance/i.test(msg))
     return {
       text: 'Not enough testnet MON. Each pack costs about 0.16 MON including gas (0.1 MON pack + gas reserve).',
       needsMon: true,
     };
   return { text: msg.split('\n')[0].slice(0, 160), needsMon: false };
+}
+
+/** "1.5" → wei. Returns undefined for anything that isn't a positive MON amount (max 18 decimals). */
+export function parseMon(input: string): bigint | undefined {
+  const m = input.trim().match(/^(\d*)(?:\.(\d{0,18}))?$/);
+  if (!m || (!m[1] && !m[2])) return undefined;
+  const wei = BigInt(m[1] || '0') * 10n ** 18n + BigInt((m[2] || '').padEnd(18, '0') || '0');
+  return wei > 0n ? wei : undefined;
 }

@@ -13,6 +13,8 @@ export interface DeployedToken {
 
 export const PACK_VAULT = deployment.packVault.toLowerCase() as Hex;
 export const PRICE_ORACLE = deployment.priceOracle.toLowerCase() as Hex;
+/** IR-4: the vault has the deposit bank (`deposit`, `withdrawBank`, `openPacksFromBank`). Set by Person 1 in the deployment file. */
+export const BANK_SUPPORTED: boolean = (deployment as { bank?: boolean }).bank === true;
 
 export const TOKENS: DeployedToken[] = deployment.tokens.map((t) => ({
   index: t.index,

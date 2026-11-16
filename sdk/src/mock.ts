@@ -185,6 +185,19 @@ export function makeMockResult(): PackResult {
   };
 }
 
+// ---------- mock bank (IR-4): MON deposited once, packs paid from it with no wallet popup ----------
+let bankWei = 0n;
+export const getMockBank = () => bankWei;
+export function mockBankAdd(wei: bigint): void {
+  bankWei += wei;
+  emit();
+}
+export function mockBankTake(wei: bigint): void {
+  if (wei > bankWei) throw new Error('InsufficientBank: not enough MON in your bank');
+  bankWei -= wei;
+  emit();
+}
+
 export function recordMockPull(res: PackResult): void {
   for (const p of res.pulls) balances.set(p.token, (balances.get(p.token) ?? 0n) + BigInt(p.amount));
   feed = [

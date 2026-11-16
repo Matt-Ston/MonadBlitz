@@ -10,6 +10,8 @@ import {
 import { Card } from './Card';
 import { PackTear } from './PackTear';
 import { RarityFX } from './RarityFX';
+import { ShareButton } from './ShareButton';
+import { shareWorthy } from '@/lib/share';
 import { emitFx, rectOf } from '@/lib/fx';
 import { ReturnStats } from './ReturnStats';
 
@@ -276,12 +278,15 @@ export function Reveal({
               view tx
             </a>
           </p>
-          <button
-            onClick={onAgain}
-            className="rounded-full bg-accent px-8 py-3 text-lg font-bold text-white transition hover:brightness-110"
-          >
-            {againLabel}
-          </button>
+          <div className="flex flex-wrap items-center justify-center gap-3">
+            {shareWorthy(result) && <ShareButton result={result} catalog={catalog} />}
+            <button
+              onClick={onAgain}
+              className="rounded-full bg-accent px-8 py-3 text-lg font-bold text-white transition hover:brightness-110"
+            >
+              {againLabel}
+            </button>
+          </div>
         </motion.div>
       )}
       {/* running total, pinned to the bottom of the screen */}
